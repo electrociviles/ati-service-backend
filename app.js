@@ -10,6 +10,7 @@ var indexRouter = require('./routes/index');
 var apiRouter = require('./routes/api');
 var init = require('./config/init');
 const fn = require('./utils/fn');
+var config = require('./config')
 
 var app = express();
 
@@ -45,14 +46,8 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
-app.listen(3984, function () {
+app.listen(config.port, function () {
   console.log('Aplicación ejemplo, escuchando el puerto 3000!');
-
-  var mongoose = require('mongoose');
-  mongoose.connect('mongodb://localhost/ati');
-  mongoose.Promise = global.Promise;
-  mongoose.set('debug', false);
-
   // init.Start();
   // init.createUser();
   // init.createCustomer();

@@ -1,5 +1,25 @@
 var mongoose = require("mongoose");
+var config = require('./../config')
 require('mongoose-double')(mongoose);
+
+mongoose.Promise = global.Promise
+
+if (process.env.NODE_ENV == 'production') {
+    mongoose.connect(config.db.url, {
+        'auth': { 'authSource': 'admin' },
+        'user': config.db.user,
+        'pass': config.db.pass,
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    })
+}
+else {
+    mongoose.connect(config.db.url, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    })
+}
+
 
 const bcrypt = require("bcrypt");
 
