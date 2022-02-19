@@ -45,7 +45,7 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
-app.listen(3000, function () {
+app.listen(3984, function () {
   console.log('Aplicación ejemplo, escuchando el puerto 3000!');
 
   var mongoose = require('mongoose');
