@@ -9,5 +9,4 @@ module.exports = {
     pass: 'nTJacob*$%@Cleo*..bnSystem'
   },
   origins: ['https://www.atiservicios.com', 'www.atiservicios.com', 'atiservicios.com', 'http://atiservicios.com'],
-
 }
