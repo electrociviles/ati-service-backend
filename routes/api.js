@@ -1,0 +1,398 @@
+var express = require('express');
+var router = express.Router();
+var multer = require('multer')
+var fs = require('fs');
+var upload = multer({ dest: './uploads/' })
+var fn = require("./../utils/fn");
+var schemas = require("./../db/schemas");
+const bcrypt = require("bcrypt");
+const authMiddleware = require("../middleware/auth");
+var mongoose = require('mongoose');
+
+router.post('/', (req, res, next) => {
+  console.log(req.body);
+  console.log(req);
+
+  res.json({ status: 'respond with a resource' });
+});
+
+router.post('/login', async (req, res, next) => {
+
+  let user = await schemas.User.findOne({ 'username': req.body.username })
+  if (user) {
+    let result = bcrypt.compareSync(req.body.password, user.password);
+    let token = fn.createToken(user, process.env.SECRET, "100hr");
+    if (result) {
+      res.json({ status: 'success', token, id: user._id });
+    } else {
+      res.json({ status: 'error', message: 'Contraseña incorrecta' });
+    }
+  } else {
+    res.json({ status: 'error', message: 'Usuario no encontrado' });
+  }
+});
+
+router.post('/listProjects', authMiddleware, async (req, res) => {
+  console.log(req.body);
+  var query = schemas.Project.find().select();
+
+  if (req.body.search) {
+    query.where('name').equals(new RegExp(req.body.search, "i"));
+  }
+  let projects = await query.exec();
+  res.json({ status: 'success', projects });
+});
+
+router.post('/listAttentions', authMiddleware, async (req, res) => {
+  console.log(req.body);
+  var query = schemas.Attention.find().select();
+
+  if (req.body.search) {
+    query.where('description').equals(new RegExp(req.body.search, "i"));
+  }
+  let attentions = await query.exec();
+  res.json({ status: 'success', attentions });
+});
+
+router.post('/getAttention', async (req, res) => {
+  console.log('e ', req.body);
+
+  let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.attention),).populate({
+    path: 'customer',
+  }).exec();
+
+  res.json({ status: 'success', attention });
+});
+
+router.post('/listCustomers', async (req, res) => {
+  console.log("----------------------- Body ----------------------");
+  console.log(req.body);
+  var query = schemas.Customer.find().select();
+
+  if (req.body.search) {
+    query.where('name').equals(new RegExp(req.body.search, "i"));
+  }
+  let customers = await query.exec();
+  res.json({ status: 'success', customers });
+});
+
+router.post('/listBoards', authMiddleware, async (req, res) => {
+
+  console.log(req.body)
+  var query = schemas.Board.find().sort({ '_id': 1 }).select();
+  if (req.body.project) {
+    query.where('project').equals(mongoose.Types.ObjectId(req.body.project));
+  }
+  let boards = await query.exec();
+  res.json({ status: 'success', boards });
+});
+
+router.post('/createBoard', async (req, res) => {
+
+  console.log(req.body)
+  let itemsBoards = [];
+  try {
+    let board = new schemas.Board({
+      name: req.body.name,
+      type: req.body.type,
+      project: mongoose.Types.ObjectId(req.body.project),
+    });
+    if (req.body.type == 'tri') {
+      items = await schemas.Item.find({ mode: { $in: ['tri', 'after', 'before'] }, })
+    } else {
+      items = await schemas.Item.find({ mode: { $in: ['mono', 'after', 'before'] }, })
+    }
+
+    await fn.asyncForEach(items, async (item, index) => {
+      let itemBoard = schemas.ItemBoard({
+        board: board._id,
+        item: mongoose.Types.ObjectId(item._id),
+        photos: [],
+        value: 0.0,
+      });
+      await itemBoard.save();
+      itemsBoards.push(itemBoard);
+    });
+    board.itemsBoards = itemsBoards;
+    await board.save();
+
+
+
+    res.json({ status: 'success', board, message: "Tablero registrado exitosamente" });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+
+  }
+});
+
+router.post('/createCustomer', async (req, res) => {
+
+  try {
+    let customer = new schemas.Customer({
+      name: req.body.name,
+      address: req.body.address,
+      email: req.body.email,
+      phone: req.body.phone
+    });
+    customer.save();
+
+    res.json({ status: 'success', message: "Cliente registrado exitosamente.", customer, });
+  } catch (error) {
+    console.log(error)
+    let customer = {
+      id: "",
+    }
+    res.json({ status: 'error', message: error, customer });
+
+  }
+});
+
+router.post('/getItemBoard', async (req, res) => {
+
+  console.log(req.body)
+  let completed = await fn.verifyItemBoard(req.body.board);
+  items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),).populate({
+    path: 'itemsBoards',
+    populate: [{
+      path: "item"
+    }]
+  }).exec();
+  res.json({ status: 'success', completed, items });
+});
+
+router.post('/upload', upload.any("pictures"), async (req, res) => {
+  console.log(req.body);
+  console.log("---------------- files ----------------");
+  console.log(req.files);
+  console.log("---------------- file ----------------");
+
+
+  try {
+
+
+    await fn.asyncForEach(req.files, async (file, index) => {
+      let src = fs.createReadStream(file.path);
+      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      let dest = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(dest);
+      src.on('end', () => {
+        console.log('end');
+        fs.unlinkSync(file.path);
+      });
+      src.on('error', (err) => {
+        console.log(err)
+      });
+      schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+        $push: { photos: { url: fileName, type: 'remote' } }
+      }, {
+        multi: true
+      }).exec();
+    });
+    for (var key in req.body) {
+      schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(key) }, {
+        $set: { value: parseFloat(req.body[key]) }
+      }, {
+        multi: true
+      }).exec();
+
+    }
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    res.json({ status: 'error' });
+  }
+
+
+});
+
+router.post('/createAttention', upload.any("pictures"), async (req, res) => {
+  console.log(req.body);
+  console.log("---------------- files ----------------");
+  console.log(req.files);
+  console.log("---------------- file ----------------");
+
+  // let attention = new schemas.Attention({
+
+  // });
+  // await attention.save();
+  try {
+
+    let attention = new schemas.Attention({
+      photos_before: [],
+      photos_after: [],
+      description: req.body.observations,
+      signature: "",
+      status: "created",
+      customer: mongoose.Types.ObjectId(req.body.customer),
+      presave: true
+    });
+
+    await fn.asyncForEach(req.files, async (file) => {
+      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      let src = await fs.createReadStream(file.path);
+      let dest = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(dest);
+      src.on('end', () => {
+        console.log('end');
+        fs.unlinkSync(file.path);
+      });
+      src.on('error', (err) => {
+        console.log(err)
+      });
+
+      attention.photos_before.push(fileName);
+    });
+    console.log(`Saving all`);
+
+    await attention.save();
+
+    res.json({ status: 'success' });
+
+  } catch (error) {
+    res.json({ status: 'success' });
+  }
+
+});
+
+
+router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
+  console.log(req.body);
+  console.log("---------------- files ----------------");
+  console.log(req.files);
+  console.log("---------------- file ----------------");
+
+  try {
+
+    let fileNameSign = '';
+
+    if (req.files) {
+      await fn.asyncForEach(req.files, async (file) => {
+        let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+        let src = await fs.createReadStream(file.path);
+        let dest = await fs.createWriteStream('./uploads/' + fileName);
+        src.pipe(dest);
+        src.on('end', () => {
+          console.log('end');
+          fs.unlinkSync(file.path);
+        });
+        src.on('error', (err) => {
+          console.log(err)
+        });
+        if (file.fieldname == '1') {
+          schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+            $push: {
+              photos_before: fileName,
+            }
+          }, {
+            upsert: true
+          }).exec();
+        } else if (file.fieldname == '2') {
+          schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+            $push: {
+              photos_after: fileName,
+            }
+          }, {
+            upsert: true
+          }).exec();
+        } else {
+          fileNameSign = fileName;
+        }
+      });
+    }
+
+    schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        description: req.body.observations,
+        customer: mongoose.Types.ObjectId(req.body.customer),
+        signature: fileNameSign
+      }
+    }, {
+      upsert: true
+    }).exec();
+
+
+    res.json({ status: 'success' });
+
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error' });
+  }
+
+});
+
+router.post('/getItemAttention', async (req, res) => {
+
+  items = await schemas.Item.findById(mongoose.Types.ObjectId(req.body.board),).populate({
+    path: 'itemsBoards',
+    populate: [{
+      path: "item"
+    }]
+  }).exec();
+  res.json({ status: 'success', completed, items });
+});
+
+router.post('/getInfoUser', async (req, res) => {
+
+  let user = await schemas.User.findById(mongoose.Types.ObjectId(req.body.id),).exec();
+  res.json({ status: 'success', user });
+});
+
+router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
+  try {
+    console.log(req.body);
+    console.log("---------------- files ----------------");
+    console.log(req.files);
+    console.log("---------------- file ----------------");
+
+    await fn.asyncForEach(req.files, async (file) => {
+      let src = fs.createReadStream(file.path);
+      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      let dest = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(dest);
+      src.on('end', () => {
+        console.log('end');
+        fs.unlinkSync(file.path);
+      });
+      src.on('error', (err) => {
+        console.log(err)
+      });
+      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          photo: fileName
+        }
+      }, {
+        multi: true
+      }).exec();
+    });
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        name: req.body.name,
+        document_number: req.body.document_number,
+        username: req.body.username,
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    if (req.body.password) {
+      const salt = await bcrypt.genSalt(10);
+      let password = await bcrypt.hash(req.body.password, salt);
+
+      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: { password: password }
+      }, {
+        multi: true
+      }).exec();
+
+    }
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
+});
+
+module.exports = router;

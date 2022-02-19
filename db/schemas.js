@@ -1,0 +1,104 @@
+var mongoose = require("mongoose");
+require('mongoose-double')(mongoose);
+
+const bcrypt = require("bcrypt");
+
+var CustomerSchema = new mongoose.Schema({
+    name: String,
+    address: String,
+    email: String,
+    phone: String
+});
+var Customer = mongoose.model('Customer', CustomerSchema);
+
+var UserSchema = new mongoose.Schema({
+    name: String,
+    document_number: String,
+    photo: String,
+    username: String,
+    password: String,
+    role: String,
+});
+UserSchema.pre('save', async function (next) {
+
+    var user = this;
+    if (!this.isModified('password')) {
+        return next();
+    }
+
+    try {
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+        return next();
+    } catch (e) {
+        return next(e);
+    }
+});
+var User = mongoose.model('User', UserSchema);
+
+var ProjectSchema = new mongoose.Schema({
+    name: String,
+    type: String,
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }
+});
+var Project = mongoose.model('Project', ProjectSchema);
+
+var ItemSchema = new mongoose.Schema({
+    mode: String,
+    title: String,
+    description: String,
+    type: String,
+    gallery: Boolean,
+    hasValue: Boolean,
+    placeHolder: String,
+    letterOne: String,
+    letterTwo: String,
+    colorOne: String,
+    colorTwo: String,
+    textColor: String,
+    textColorOne: String,
+    textColorTwo: String,
+});
+var Item = mongoose.model('Item', ItemSchema);
+
+var ItemBoardSchema = new mongoose.Schema({
+    board: { type: mongoose.Schema.Types.ObjectId, ref: 'Board' },
+    item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
+    photos: [],
+    value: mongoose.Schema.Types.Double,
+});
+var ItemBoard = mongoose.model('Item_Board', ItemBoardSchema);
+
+var BoardSchema = new mongoose.Schema({
+    name: String,
+    type: String,
+    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    itemsBoards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Board' }]
+});
+var Board = mongoose.model('Board', BoardSchema);
+
+
+var AttentionSchema = new mongoose.Schema({
+    photos_before: [],
+    photos_after: [],
+    description: String,
+    signature: String,
+    status: String,
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    presave: Boolean,
+});
+var Attention = mongoose.model('Attention', AttentionSchema);
+
+
+var schemas =
+{
+    Customer,
+    Board,
+    Project,
+    Item,
+    ItemBoard,
+    User,
+    Attention,
+};
+module.exports = schemas;
