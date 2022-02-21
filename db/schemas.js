@@ -39,6 +39,7 @@ var UserSchema = new mongoose.Schema({
     username: String,
     password: String,
     role: String,
+    token: String,
 });
 UserSchema.pre('save', async function (next) {
 
@@ -95,7 +96,8 @@ var BoardSchema = new mongoose.Schema({
     name: String,
     type: String,
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
-    itemsBoards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Board' }]
+    itemsBoards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Board' }],
+    status: String,
 });
 var Board = mongoose.model('Board', BoardSchema);
 

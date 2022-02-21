@@ -8,6 +8,7 @@ var schemas = require("./../db/schemas");
 const bcrypt = require("bcrypt");
 const authMiddleware = require("../middleware/auth");
 var mongoose = require('mongoose');
+const notification = require('../utils/notification');
 
 router.post('/', (req, res, next) => {
   console.log(req.body);
@@ -95,6 +96,7 @@ router.post('/createBoard', async (req, res) => {
     let board = new schemas.Board({
       name: req.body.name,
       type: req.body.type,
+      status: 'created',
       project: mongoose.Types.ObjectId(req.body.project),
     });
     if (req.body.type == 'tri') {
@@ -161,7 +163,7 @@ router.post('/getItemBoard', async (req, res) => {
   res.json({ status: 'success', completed, items });
 });
 
-router.post('/upload', upload.any("pictures"), async (req, res) => {
+router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
   console.log("---------------- files ----------------");
   console.log(req.files);
@@ -169,8 +171,6 @@ router.post('/upload', upload.any("pictures"), async (req, res) => {
 
 
   try {
-
-
     await fn.asyncForEach(req.files, async (file, index) => {
       let src = fs.createReadStream(file.path);
       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
@@ -195,7 +195,6 @@ router.post('/upload', upload.any("pictures"), async (req, res) => {
       }, {
         multi: true
       }).exec();
-
     }
 
     res.json({ status: 'success' });
@@ -254,8 +253,87 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
   }
 
 });
+router.post('/finishBoard', async (req, res) => {
+  try {
+    schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'finished'
+      }
+    }, {
+      multi: true
+    }).exec();
 
 
+    let board = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.id));
+    let users = await schemas.User.find({ role: 'administrator' });
+
+    let data = {
+      "type": "board",
+      board
+    }
+
+    let registration_ids = [];
+    users.forEach(user => {
+      if (user.token) {
+        registration_ids.push(user.token);
+      }
+      notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
+    });
+
+
+    res.json({
+      status: 'success',
+      attention,
+      message: 'Tablero finalizado exitosamente'
+    });
+  } catch (error) {
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al finalizar el tablero'
+    });
+  }
+});
+router.post('/finishAttention', async (req, res) => {
+  try {
+
+    schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'finished'
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id));
+    let users = await schemas.User.find({ role: 'administrator' });
+
+    let data = {
+      "type": "attention",
+      attention
+    }
+
+    let registration_ids = [];
+    users.forEach(user => {
+      if (user.token) {
+        registration_ids.push(user.token);
+      }
+      notification.sendNotification('', registration_ids, 'Tablero finalizado', `La atención ${attention.description} ha finalizado`, data);
+    });
+
+
+    res.json({
+      status: 'success',
+      message: 'Atención finalizada exitosamente'
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al finalizar la atención'
+    });
+  }
+});
 router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
   console.log("---------------- files ----------------");
@@ -301,15 +379,18 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
       });
     }
 
+
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         description: req.body.observations,
         customer: mongoose.Types.ObjectId(req.body.customer),
-        signature: fileNameSign
+        signature: fileNameSign,
       }
     }, {
       upsert: true
     }).exec();
+
+
 
 
     res.json({ status: 'success' });
@@ -318,7 +399,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
     console.log(error)
     res.json({ status: 'error' });
   }
-
 });
 
 router.post('/getItemAttention', async (req, res) => {
@@ -395,4 +475,23 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
   }
 });
 
+router.post('/updateToken', async (req, res) => {
+  try {
+    console.log(req.body);
+    console.log("---------------- files ----------------");
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        token: req.body.token
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
+});
 module.exports = router;
