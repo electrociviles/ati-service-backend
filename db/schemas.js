@@ -40,6 +40,7 @@ var UserSchema = new mongoose.Schema({
     password: String,
     role: String,
     token: String,
+    status: String,
 });
 UserSchema.pre('save', async function (next) {
 
