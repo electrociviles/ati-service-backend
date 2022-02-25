@@ -10,6 +10,7 @@ const authMiddleware = require("../middleware/auth");
 var mongoose = require('mongoose');
 const notification = require('../utils/notification');
 
+
 router.post('/', (req, res, next) => {
   console.log(req.body);
   console.log(req);
@@ -46,7 +47,9 @@ router.post('/listProjects', authMiddleware, async (req, res) => {
 
 router.post('/listAttentions', authMiddleware, async (req, res) => {
   console.log(req.body);
-  var query = schemas.Attention.find().select();
+  var query = schemas.Attention.find().populate({
+    path: 'customer'
+  });
 
   if (req.body.search) {
     query.where('description').equals(new RegExp(req.body.search, "i"));
@@ -58,7 +61,7 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
 router.post('/getAttention', async (req, res) => {
   console.log('e ', req.body);
 
-  let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.attention),).populate({
+  let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.attention)).populate({
     path: 'customer',
   }).exec();
 
@@ -227,22 +230,24 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       presave: true
     });
 
-    await fn.asyncForEach(req.files, async (file) => {
-      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      let src = await fs.createReadStream(file.path);
-      let dest = await fs.createWriteStream('./uploads/' + fileName);
-      src.pipe(dest);
-      src.on('end', () => {
-        console.log('end');
-        fs.unlinkSync(file.path);
-      });
-      src.on('error', (err) => {
-        console.log(err)
-      });
+    if (req.files) {
+      await fn.asyncForEach(req.files, async (file) => {
+        let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+        let src = await fs.createReadStream(file.path);
+        let dest = await fs.createWriteStream('./uploads/' + fileName);
+        src.pipe(dest);
+        src.on('end', () => {
+          console.log('end');
+          fs.unlinkSync(file.path);
+        });
+        src.on('error', (err) => {
+          console.log(err)
+        });
 
-      attention.photos_before.push(fileName);
-    });
-    console.log(`Saving all`);
+        attention.photos_before.push(fileName);
+      });
+      console.log(`Saving all`);
+    }
 
     await attention.save();
 
@@ -253,6 +258,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
   }
 
 });
+
 router.post('/finishBoard', async (req, res) => {
   try {
     schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
@@ -293,6 +299,7 @@ router.post('/finishBoard', async (req, res) => {
     });
   }
 });
+
 router.post('/finishAttention', async (req, res) => {
   try {
 
@@ -331,6 +338,56 @@ router.post('/finishAttention', async (req, res) => {
     res.json({
       status: 'error',
       message: 'Ocurrió un error al finalizar la atención'
+    });
+  }
+});
+
+router.post('/openAttention', async (req, res) => {
+  try {
+
+    schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'created'
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({
+      status: 'success',
+      message: 'Atención abierta exitosamente'
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al abrir la atención'
+    });
+  }
+});
+
+router.post('/closeAttention', async (req, res) => {
+  try {
+
+    schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'finished'
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({
+      status: 'success',
+      message: 'Atención abierta exitosamente'
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al abrir la atención'
     });
   }
 });
@@ -425,9 +482,10 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
     console.log(req.files);
     console.log("---------------- file ----------------");
 
+    let fileName = 'default.png';
     await fn.asyncForEach(req.files, async (file) => {
       let src = fs.createReadStream(file.path);
-      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
       let dest = await fs.createWriteStream('./uploads/' + fileName);
       src.pipe(dest);
       src.on('end', () => {
@@ -494,4 +552,152 @@ router.post('/updateToken', async (req, res) => {
     res.json({ status: 'error' });
   }
 });
+
+router.post('/listUsers', async (req, res) => {
+
+  console.log(req.body)
+  var query = schemas.User.find().sort({ '_id': 1 }).select();
+  // if (req.body.project) {
+  //   query.where('project').equals(mongoose.Types.ObjectId(req.body.project));
+  // }
+  let users = await query.exec();
+  let count = await schemas.User.countDocuments();
+
+  res.json({ status: 'success', users, count });
+});
+
+router.post('/updateUser', upload.any("photo"), async (req, res) => {
+  try {
+    await fn.asyncForEach(req.files, async (file) => {
+      let src = fs.createReadStream(file.path);
+      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      let dest = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(dest);
+      src.on('end', () => {
+        console.log('end');
+        fs.unlinkSync(file.path);
+      });
+      src.on('error', (err) => {
+        console.log(err)
+      });
+      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          photo: fileName
+        }
+      }, {
+        multi: true
+      }).exec();
+    });
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        name: req.body.name,
+        username: req.body.username,
+        document_number: req.body.documentNumber,
+        role: req.body.role,
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    if (req.body.password) {
+      const salt = await bcrypt.genSalt(10);
+      let password = await bcrypt.hash(req.body.password, salt);
+
+      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: { password: password }
+      }, {
+        multi: true
+      }).exec();
+    }
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
+});
+router.post('/createUser', upload.any("photo"), async (req, res) => {
+
+  let fileName = 'default.png';
+  console.log(req.body);
+  console.log(req.files);
+  try {
+    if (req.files) {
+      await fn.asyncForEach(req.files, async (file) => {
+        let src = fs.createReadStream(file.path);
+        fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+        let dest = await fs.createWriteStream('./uploads/' + fileName);
+        src.pipe(dest);
+        src.on('end', () => {
+          console.log('end');
+          fs.unlinkSync(file.path);
+        });
+        src.on('error', (err) => {
+          console.log(err)
+        });
+        schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: {
+            photo: fileName
+          }
+        }, {
+          multi: true
+        }).exec();
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    let password = await bcrypt.hash(req.body.password, salt);
+
+    let user = schemas.User({
+      name: req.body.name,
+      username: req.body.username,
+      document_number: req.body.documentNumber,
+      role: req.body.role,
+      photo: fileName,
+      password: password,
+      status: 'activo'
+    });
+    await user.save()
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
+});
+router.post('/deleteUser', async (req, res) => {
+  try {
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'inactivo',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Funcionario desabilitado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el funcionario' });
+  }
+});
+router.post('/restoreUser', async (req, res) => {
+  try {
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'activo',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Funcionario activado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al activar el funcionario' });
+  }
+});
+
 module.exports = router;

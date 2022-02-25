@@ -5,6 +5,7 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+var cors = require('cors')
 
 var indexRouter = require('./routes/index');
 var apiRouter = require('./routes/api');
@@ -14,6 +15,9 @@ var config = require('./config')
 
 var app = express();
 
+app.use(cors({
+  origin: config.origins,
+}));
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -47,7 +51,7 @@ app.use(function (err, req, res, next) {
 });
 
 app.listen(config.port, function () {
-  console.log('Aplicación ejemplo, escuchando el puerto 3000!');
+  console.log(`Aplicación ejemplo, escuchando el puerto ${config.port}!`);
   // init.Start();
   // init.createUser();
   // init.createCustomer();
