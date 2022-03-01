@@ -63,7 +63,8 @@ var User = mongoose.model('User', UserSchema);
 var ProjectSchema = new mongoose.Schema({
     name: String,
     type: String,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],
 });
 var Project = mongoose.model('Project', ProjectSchema);
 
@@ -89,6 +90,7 @@ var ItemBoardSchema = new mongoose.Schema({
     board: { type: mongoose.Schema.Types.ObjectId, ref: 'Board' },
     item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
     photos: [],
+    status: String,
     value: mongoose.Schema.Types.Double,
 });
 var ItemBoard = mongoose.model('Item_Board', ItemBoardSchema);

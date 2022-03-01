@@ -36,13 +36,25 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/listProjects', authMiddleware, async (req, res) => {
   console.log(req.body);
-  var query = schemas.Project.find().select();
+  var query = schemas.Project.find().populate({
+    path: 'boards',
+    populate: [{
+      path: "itemsBoards",
+      match: { status: 'activo' },
+      populate: [{
+        path: "item"
+      }]
+    }]
+  }).populate({
+    path: 'customer'
+  });
 
   if (req.body.search) {
     query.where('name').equals(new RegExp(req.body.search, "i"));
   }
   let projects = await query.exec();
-  res.json({ status: 'success', projects });
+  let count = await schemas.Project.countDocuments();
+  res.json({ status: 'success', projects, count });
 });
 
 router.post('/listAttentions', authMiddleware, async (req, res) => {
@@ -55,7 +67,8 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
     query.where('description').equals(new RegExp(req.body.search, "i"));
   }
   let attentions = await query.exec();
-  res.json({ status: 'success', attentions });
+  let count = await schemas.Attention.countDocuments();
+  res.json({ status: 'success', attentions, count });
 });
 
 router.post('/getAttention', async (req, res) => {
@@ -93,7 +106,6 @@ router.post('/listBoards', authMiddleware, async (req, res) => {
 
 router.post('/createBoard', async (req, res) => {
 
-  console.log(req.body)
   let itemsBoards = [];
   try {
     let board = new schemas.Board({
@@ -112,6 +124,7 @@ router.post('/createBoard', async (req, res) => {
       let itemBoard = schemas.ItemBoard({
         board: board._id,
         item: mongoose.Types.ObjectId(item._id),
+        status: 'activo',
         photos: [],
         value: 0.0,
       });
@@ -120,6 +133,12 @@ router.post('/createBoard', async (req, res) => {
     });
     board.itemsBoards = itemsBoards;
     await board.save();
+
+    schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(req.body.project) }, {
+      $push: { boards: board._id }
+    }, {
+      multi: true
+    }).exec();
 
 
 
@@ -159,11 +178,47 @@ router.post('/getItemBoard', async (req, res) => {
   let completed = await fn.verifyItemBoard(req.body.board);
   items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),).populate({
     path: 'itemsBoards',
+    match: { status: "activo" },
     populate: [{
-      path: "item"
+      path: "item",
+
     }]
   }).exec();
   res.json({ status: 'success', completed, items });
+});
+
+router.post('/createProject', async (req, res) => {
+
+  try {
+    let project = new schemas.Project({
+      name: req.body.name,
+      type: req.body.type,
+      customer: mongoose.Types.ObjectId(req.body.customer)
+    });
+    project.save();
+
+    res.json({ status: 'success', message: "Proyecto registrado exitosamente.", project, });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+  }
+});
+
+router.post('/removeMeasurement', async (req, res) => {
+
+  console.log(req.body);
+  try {
+    schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: { status: 'inactivo' }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({ status: 'success', message: "Medición eliminada exitosamente." });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+  }
 });
 
 router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
@@ -391,6 +446,7 @@ router.post('/closeAttention', async (req, res) => {
     });
   }
 });
+
 router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
   console.log("---------------- files ----------------");
@@ -436,7 +492,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
       });
     }
 
-
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         description: req.body.observations,
@@ -446,9 +501,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
     }, {
       upsert: true
     }).exec();
-
-
-
 
     res.json({ status: 'success' });
 
@@ -616,6 +668,7 @@ router.post('/updateUser', upload.any("photo"), async (req, res) => {
     res.json({ status: 'error' });
   }
 });
+
 router.post('/createUser', upload.any("photo"), async (req, res) => {
 
   let fileName = 'default.png';
@@ -665,6 +718,7 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
     res.json({ status: 'error' });
   }
 });
+
 router.post('/deleteUser', async (req, res) => {
   try {
 
@@ -682,6 +736,7 @@ router.post('/deleteUser', async (req, res) => {
     res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el funcionario' });
   }
 });
+
 router.post('/restoreUser', async (req, res) => {
   try {
 

@@ -47,7 +47,7 @@ exports.Start = function () {
         colorOne: colors.yellow,
         colorTwo: colors.red,
         textColorOne: colors.black,
-        textColorTwo: colors.black,
+        textColorTwo: colors.white,
 
     };
     list.push(item);
@@ -64,8 +64,8 @@ exports.Start = function () {
         letterTwo: "T",
         colorOne: colors.blue,
         colorTwo: colors.red,
-        textColorOne: colors.black,
-        textColorTwo: colors.black,
+        textColorOne: colors.white,
+        textColorTwo: colors.white,
     };
     list.push(item);
 
@@ -115,6 +115,8 @@ exports.Start = function () {
         letterTwo: "N",
         colorOne: colors.red,
         colorTwo: colors.white,
+        textColorOne: colors.white,
+        textColorTwo: colors.black,
     };
     list.push(item);
 
@@ -183,6 +185,8 @@ exports.Start = function () {
         letterTwo: "N",
         colorOne: colors.red,
         colorTwo: colors.white,
+        textColorOne: colors.white,
+        textColorTwo: colors.black,
     };
     list.push(item);
 
