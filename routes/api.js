@@ -35,12 +35,11 @@ router.post('/login', async (req, res, next) => {
 });
 
 router.post('/listProjects', authMiddleware, async (req, res) => {
-  console.log(req.body);
+
   var query = schemas.Project.find().populate({
     path: 'boards',
     populate: [{
       path: "itemsBoards",
-      match: { status: 'activo' },
       populate: [{
         path: "item"
       }]
