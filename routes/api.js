@@ -89,7 +89,9 @@ router.post('/listCustomers', async (req, res) => {
     query.where('name').equals(new RegExp(req.body.search, "i"));
   }
   let customers = await query.exec();
-  res.json({ status: 'success', customers });
+
+  let count = await schemas.Customer.countDocuments();
+  res.json({ status: 'success', customers, count });
 });
 
 router.post('/listBoards', authMiddleware, async (req, res) => {
@@ -144,28 +146,6 @@ router.post('/createBoard', async (req, res) => {
   } catch (error) {
     console.log(error)
     res.json({ status: 'error', message: error });
-
-  }
-});
-
-router.post('/createCustomer', async (req, res) => {
-
-  try {
-    let customer = new schemas.Customer({
-      name: req.body.name,
-      address: req.body.address,
-      email: req.body.email,
-      phone: req.body.phone
-    });
-    customer.save();
-
-    res.json({ status: 'success', message: "Cliente registrado exitosamente.", customer, });
-  } catch (error) {
-    console.log(error)
-    let customer = {
-      id: "",
-    }
-    res.json({ status: 'error', message: error, customer });
 
   }
 });
@@ -845,6 +825,59 @@ router.post('/sendEmailBoard', async (req, res) => {
     status: 'success',
     message: 'Correo enviado'
   });
+});
+
+
+router.post('/createCustomer', async (req, res) => {
+
+  console.log('asdkaldadldlfjaldfjlasdjlsjfldajflkasdjklalfkajlk')
+  console.log(req.body)
+  let cus = await schemas.Customer.findOne({ 'nit': req.body.nit })
+  if (!cus) {
+
+    try {
+
+      let customer = schemas.Customer({
+        name: req.body.name,
+        nit: req.body.nit,
+        address: req.body.address,
+        phone: req.body.phone,
+        email: req.body.email,
+        status: 'activo'
+      });
+      await customer.save()
+
+      res.json({ status: 'success' });
+
+    } catch (error) {
+      console.log(error);
+      res.json({ status: 'error' });
+    }
+  } else {
+    res.json({ status: 'error', message: "El cliente ya existe" });
+  }
+});
+
+router.post('/updateCustomer', async (req, res) => {
+  console.log(req.body)
+  try {
+
+    schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        name: req.body.name,
+        nit: req.body.nit,
+        address: req.body.username,
+        phone: req.body.phone,
+        email: req.body.email,
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
 });
 
 module.exports = router;

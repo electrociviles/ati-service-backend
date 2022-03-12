@@ -28,7 +28,8 @@ var CustomerSchema = new mongoose.Schema({
     name: String,
     address: String,
     email: String,
-    phone: String
+    phone: String,
+    nit: String
 });
 var Customer = mongoose.model('Customer', CustomerSchema);
 
