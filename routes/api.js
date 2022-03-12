@@ -113,6 +113,7 @@ router.post('/createBoard', async (req, res) => {
       type: req.body.type,
       status: 'created',
       project: mongoose.Types.ObjectId(req.body.project),
+      observation: ''
     });
     if (req.body.type == 'tri') {
       items = await schemas.Item.find({ mode: { $in: ['tri', 'after', 'before'] }, })
@@ -140,7 +141,9 @@ router.post('/createBoard', async (req, res) => {
       multi: true
     }).exec();
 
-    res.json({ status: 'success', board, message: "Tablero registrado exitosamente" });
+    b = board;
+    b.id = board._id
+    res.json({ status: 'success', board: b, message: "Tablero registrado exitosamente" });
   } catch (error) {
     console.log(error)
     res.json({ status: 'error', message: error });
