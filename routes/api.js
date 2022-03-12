@@ -222,7 +222,11 @@ router.post('/removeMeasurement', async (req, res) => {
 
 router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
-  console.log("---------------- files ----------------");
+
+  console.log("---------------- board ----------------");
+  console.log(req.body.board);
+  console.log("---------------- board ----------------");
+
   console.log(req.files);
   console.log("---------------- file ----------------");
 
@@ -247,8 +251,21 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
       }).exec();
     });
     for (var key in req.body) {
-      schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(key) }, {
-        $set: { value: parseFloat(req.body[key]) }
+      if (key.length == 24 && parseFloat(req.body[key]) > 0) {
+        console.log('key ', key);
+        console.log('value ', req.body[key]);
+
+        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(key) }, {
+          $set: { value: parseFloat(req.body[key]) }
+        }, {
+          upsert: true
+        }).exec();
+      }
+    }
+
+    if (req.body.observation.toString().trim().length > 0) {
+      schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.board) }, {
+        $set: { observation: req.body.observation }
       }, {
         multi: true
       }).exec();
@@ -256,6 +273,7 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 
     res.json({ status: 'success' });
   } catch (error) {
+    console.log(error);
     res.json({ status: 'error' });
   }
 
@@ -332,6 +350,7 @@ router.post('/finishBoard', async (req, res) => {
       board
     }
 
+
     let registration_ids = [];
     users.forEach(user => {
       if (user.token) {
@@ -340,13 +359,14 @@ router.post('/finishBoard', async (req, res) => {
       notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
     });
 
+    await fn.sendEmailBoard(req.body.id);
 
     res.json({
       status: 'success',
-      attention,
       message: 'Tablero finalizado exitosamente'
     });
   } catch (error) {
+    console.log(error);
     res.json({
       status: 'error',
       message: 'Ocurrió un error al finalizar el tablero'
@@ -381,6 +401,7 @@ router.post('/finishAttention', async (req, res) => {
       notification.sendNotification('', registration_ids, 'Tablero finalizado', `La atención ${attention.description} ha finalizado`, data);
     });
 
+    await fn.sendEmailAttention(req.body.id);
 
     res.json({
       status: 'success',
@@ -752,6 +773,40 @@ router.post('/restoreUser', async (req, res) => {
     console.log(error);
     res.json({ status: 'error', message: 'Ocurrió un error al activar el funcionario' });
   }
+});
+
+router.post('/openItemBoard', async (req, res) => {
+  console.log(req.body)
+  try {
+    schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'activo'
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({
+      status: 'success',
+      message: 'Marcación abierta exitosamente'
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al abrir la marcación'
+    });
+  }
+});
+
+router.post('/sendEmailBoard', async (req, res) => {
+
+  let response = await fn.sendEmailBoard(req.body.id);
+  res.json({
+    status: 'success',
+    message: 'Correo enviado'
+  });
 });
 
 module.exports = router;

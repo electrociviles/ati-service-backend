@@ -101,6 +101,7 @@ var BoardSchema = new mongoose.Schema({
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     itemsBoards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Board' }],
     status: String,
+    observation: String,
 });
 var Board = mongoose.model('Board', BoardSchema);
 
