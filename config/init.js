@@ -436,11 +436,11 @@ exports.Start = function () {
 
     var item = {
         mode: 'after',
-        title: "Grados + termografía",
+        title: "Termografía despues",
         description: "",
         type: "degress_termographi",
         gallery: false,
-        hasValue: false,
+        hasValue: true,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",

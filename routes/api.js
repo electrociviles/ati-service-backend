@@ -827,6 +827,15 @@ router.post('/sendEmailBoard', async (req, res) => {
   });
 });
 
+router.post('/sendEmailAttention', async (req, res) => {
+
+  await fn.sendEmailAttention(req.body.id);
+  res.json({
+    status: 'success',
+    message: 'Correo enviado'
+  });
+});
+
 
 router.post('/createCustomer', async (req, res) => {
 
