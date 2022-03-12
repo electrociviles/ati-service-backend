@@ -105,6 +105,7 @@ router.post('/listBoards', authMiddleware, async (req, res) => {
 
 router.post('/createBoard', async (req, res) => {
 
+  console.log(req.body)
   let itemsBoards = [];
   try {
     let board = new schemas.Board({
@@ -138,8 +139,6 @@ router.post('/createBoard', async (req, res) => {
     }, {
       multi: true
     }).exec();
-
-
 
     res.json({ status: 'success', board, message: "Tablero registrado exitosamente" });
   } catch (error) {
@@ -691,51 +690,59 @@ router.post('/updateUser', upload.any("photo"), async (req, res) => {
 
 router.post('/createUser', upload.any("photo"), async (req, res) => {
 
-  let fileName = 'default.png';
-  console.log(req.body);
-  console.log(req.files);
-  try {
-    if (req.files) {
-      await fn.asyncForEach(req.files, async (file) => {
-        let src = fs.createReadStream(file.path);
-        fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-        let dest = await fs.createWriteStream('./uploads/' + fileName);
-        src.pipe(dest);
-        src.on('end', () => {
-          console.log('end');
-          fs.unlinkSync(file.path);
+
+  let usr = await schemas.User.findOne({ 'document_number': req.body.documentNumber })
+  if (!usr) {
+
+    let fileName = 'default.png';
+    console.log(req.body);
+    console.log(req.files);
+    try {
+      if (req.files) {
+        await fn.asyncForEach(req.files, async (file) => {
+          let src = fs.createReadStream(file.path);
+          fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+          let dest = await fs.createWriteStream('./uploads/' + fileName);
+          src.pipe(dest);
+          src.on('end', () => {
+            console.log('end');
+            fs.unlinkSync(file.path);
+          });
+          src.on('error', (err) => {
+            console.log(err)
+          });
+          schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+            $set: {
+              photo: fileName
+            }
+          }, {
+            multi: true
+          }).exec();
         });
-        src.on('error', (err) => {
-          console.log(err)
-        });
-        schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-          $set: {
-            photo: fileName
-          }
-        }, {
-          multi: true
-        }).exec();
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      let password = await bcrypt.hash(req.body.password, salt);
+
+      let user = schemas.User({
+        name: req.body.name,
+        username: req.body.username,
+        document_number: req.body.documentNumber,
+        role: req.body.role,
+        photo: fileName,
+        password: password,
+        status: 'activo'
       });
+      await user.save()
+
+      res.json({ status: 'success' });
+
+    } catch (error) {
+      console.log(error);
+      res.json({ status: 'error' });
     }
-
-    const salt = await bcrypt.genSalt(10);
-    let password = await bcrypt.hash(req.body.password, salt);
-
-    let user = schemas.User({
-      name: req.body.name,
-      username: req.body.username,
-      document_number: req.body.documentNumber,
-      role: req.body.role,
-      photo: fileName,
-      password: password,
-      status: 'activo'
-    });
-    await user.save()
-
-    res.json({ status: 'success' });
-  } catch (error) {
-    console.log(error);
-    res.json({ status: 'error' });
+  } else {
+    res.json({ status: 'error', message: "El usuario ya existe" });
   }
 });
 
