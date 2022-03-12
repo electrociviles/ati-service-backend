@@ -105,7 +105,6 @@ router.post('/listBoards', authMiddleware, async (req, res) => {
 
 router.post('/createBoard', async (req, res) => {
 
-  console.log(req.body)
   let itemsBoards = [];
   try {
     let board = new schemas.Board({
@@ -141,9 +140,7 @@ router.post('/createBoard', async (req, res) => {
       multi: true
     }).exec();
 
-    b = board;
-    b.id = board._id
-    res.json({ status: 'success', board: b, message: "Tablero registrado exitosamente" });
+    res.json({ status: 'success', board, message: "Tablero registrado exitosamente" });
   } catch (error) {
     console.log(error)
     res.json({ status: 'error', message: error });
@@ -175,7 +172,6 @@ router.post('/createCustomer', async (req, res) => {
 
 router.post('/getItemBoard', async (req, res) => {
 
-  console.log(req.body)
   let completed = await fn.verifyItemBoard(req.body.board);
   items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),).populate({
     path: 'itemsBoards',
@@ -237,11 +233,19 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
     await fn.asyncForEach(req.files, async (file, index) => {
       let src = fs.createReadStream(file.path);
       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      let dest = await fs.createWriteStream('./uploads/' + fileName);
-      src.pipe(dest);
-      src.on('end', () => {
+      let outStream = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(outStream);
+
+      src.on('end', async () => {
         console.log('end');
         fs.unlinkSync(file.path);
+
+        const Jimp = require('jimp');
+        const image = await Jimp.read('./uploads/' + fileName);
+        await image.resize(400, Jimp.AUTO);
+        await image.quality(50);
+        await image.writeAsync('./uploads/' + fileName);
+
       });
       src.on('error', (err) => {
         console.log(err)
@@ -313,6 +317,12 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
         src.on('end', () => {
           console.log('end');
           fs.unlinkSync(file.path);
+
+          const Jimp = require('jimp');
+          const image = await Jimp.read('./uploads/' + fileName);
+          await image.resize(400, Jimp.AUTO);
+          await image.quality(50);
+          await image.writeAsync('./uploads/' + fileName);
         });
         src.on('error', (err) => {
           console.log(err)
@@ -488,6 +498,12 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
         src.on('end', () => {
           console.log('end');
           fs.unlinkSync(file.path);
+
+          const Jimp = require('jimp');
+          const image = await Jimp.read('./uploads/' + fileName);
+          await image.resize(400, Jimp.AUTO);
+          await image.quality(50);
+          await image.writeAsync('./uploads/' + fileName);
         });
         src.on('error', (err) => {
           console.log(err)
@@ -565,6 +581,12 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
       src.on('end', () => {
         console.log('end');
         fs.unlinkSync(file.path);
+
+        const Jimp = require('jimp');
+        const image = await Jimp.read('./uploads/' + fileName);
+        await image.resize(400, Jimp.AUTO);
+        await image.quality(50);
+        await image.writeAsync('./uploads/' + fileName);
       });
       src.on('error', (err) => {
         console.log(err)
@@ -710,6 +732,12 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
           src.on('end', () => {
             console.log('end');
             fs.unlinkSync(file.path);
+
+            const Jimp = require('jimp');
+            const image = await Jimp.read('./uploads/' + fileName);
+            await image.resize(400, Jimp.AUTO);
+            await image.quality(50);
+            await image.writeAsync('./uploads/' + fileName);
           });
           src.on('error', (err) => {
             console.log(err)
@@ -812,7 +840,7 @@ router.post('/openItemBoard', async (req, res) => {
 
 router.post('/sendEmailBoard', async (req, res) => {
 
-  let response = await fn.sendEmailBoard(req.body.id);
+  await fn.sendEmailBoard(req.body.id);
   res.json({
     status: 'success',
     message: 'Correo enviado'
