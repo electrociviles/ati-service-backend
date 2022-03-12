@@ -314,7 +314,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
         let src = await fs.createReadStream(file.path);
         let dest = await fs.createWriteStream('./uploads/' + fileName);
         src.pipe(dest);
-        src.on('end', () => {
+        src.on('end', async () => {
           console.log('end');
           fs.unlinkSync(file.path);
 
@@ -495,7 +495,7 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
         let src = await fs.createReadStream(file.path);
         let dest = await fs.createWriteStream('./uploads/' + fileName);
         src.pipe(dest);
-        src.on('end', () => {
+        src.on('end', async () => {
           console.log('end');
           fs.unlinkSync(file.path);
 
@@ -578,7 +578,7 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
       fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
       let dest = await fs.createWriteStream('./uploads/' + fileName);
       src.pipe(dest);
-      src.on('end', () => {
+      src.on('end', async () => {
         console.log('end');
         fs.unlinkSync(file.path);
 
@@ -729,7 +729,7 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
           fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
           let dest = await fs.createWriteStream('./uploads/' + fileName);
           src.pipe(dest);
-          src.on('end', () => {
+          src.on('end', async () => {
             console.log('end');
             fs.unlinkSync(file.path);
 
