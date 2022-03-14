@@ -1106,6 +1106,8 @@ router.post('/sendReportProject', async (req, res) => {
       pathServicePhp: config.pathSavePdf
     }
 
+    console.log(JSON.stringify(data, null, 4))
+
     axios.post(config.pathServicePhp, data)
       .then(async (response) => {
         await fn.sendEmailProject(response.data.data.id);
