@@ -3,6 +3,9 @@ const jwt = require("jsonwebtoken");
 const mongoose = require('mongoose');
 const mailer = require('../utils/mailer');
 const schemas = require('./../db/schemas');
+var fs = require('fs');
+var config = require('./../config')
+var qpdf = require('node-qpdf');
 
 const createToken = (user, secret, expiresIn) => {
     const { id, name, document_number, photo, username } = user
@@ -15,6 +18,7 @@ const createToken = (user, secret, expiresIn) => {
         username,
     }, secret, { expiresIn })
 }
+
 const asyncForEach = async (array, callback) => {
     for (let index = 0; index < array.length; index++) {
         await callback(array[index], index, array)
@@ -53,88 +57,36 @@ const makedId = (length) => {
     }
     return result;
 }
+
 const fileExtension = fileName => {
     return fileName.slice((fileName.lastIndexOf(".") - 1 >>> 0) + 2);
-
 }
 
-const sendEmailBoard = id => {
+const sendEmailProject = id => {
+
+    console.log('id', id)
 
     return new Promise(async (resolve, reject) => {
-        const client = require("jsreport-client")("http://127.0.0.1:4013", "binariox", "system")
         try {
 
-            let shortid = 'WaIAVAU';
-            let board = await schemas.Board.findById(mongoose.Types.ObjectId(id),).populate({
-                path: 'itemsBoards',
-                match: { status: "activo" },
-                populate: [{
-                    path: "item",
 
-                }]
-            }).exec();
-
-
-            let project = await schemas.Project.findById(mongoose.Types.ObjectId(board.project));
+            let project = await schemas.Project.findById(mongoose.Types.ObjectId(id));
             let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(project.customer));
-            console.log('customer', customer);
+
+            const HummusRecipe = require('hummus-recipe');
+            const pdfDoc = new HummusRecipe(`./uploads/${id}.pdf`, `./uploads/${id}.pdf`);
+
+            pdfDoc.encrypt({
+                userPassword: customer.nit,
+                ownerPassword: customer.nit,
+                userProtectionFlag: 4
+            }).endPDF();
+
+            let link = `${config.urlPdf}${id}.pdf`;
+            mailer.emailProject(customer, project, link);
 
 
-            let newItemsBoards = board.itemsBoards.map(element => {
-                if (element.photos.length == 0) {
-                    element.photos = [{
-                        url: 'default.png',
-                        type: 'remote'
-                    }]
-                }
-                return element;
-            });
-            board.itemsBoards = newItemsBoards;
-
-            let cellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
-            let cellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
-            let cellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
-            let cellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
-
-            let data = {
-                cellsBefore,
-                cellsVoltaje,
-                cellsCorriente,
-                cellsAfter,
-                boardName: board.name,
-                observation: board.observation,
-                boardType: board.type === 'tri' ? 'Trifásico' : 'Monofásico',
-                proyectName: 'Proyecto'
-            }
-
-            console.log(JSON.stringify(data, null, 4))
-
-
-            async function render() {
-                const response = await client.render({
-                    template:
-                    {
-                        shortid: shortid,
-                        ecipe: 'html',
-                        engine: 'handlebars'
-                    },
-                    data
-                })
-                const bodyBuffer = await response.body()
-                var pdfBase64 = Buffer.from(bodyBuffer, 'binary').toString('base64');
-
-                let attachments = [
-                    {
-                        filename: 'Cierre tablero ' + board.name + '.pdf',
-                        content: pdfBase64,
-                        encoding: 'base64'
-                    },
-                ];
-                mailer.emailCloseBoard(customer, attachments);
-
-                resolve(true);
-            }
-            render().catch(console.error)
+            resolve(true);
 
         } catch (error) {
             console.log(error);
@@ -220,12 +172,56 @@ const sendEmailAttention = id => {
     });
 }
 
+const validateAttention = attention => {
+    let errors = 0;
+    if (attention.signature.length == 0) {
+        errors++;
+    }
+    if (attention.photos_before.length == 0) {
+        errors++;
+    }
+    if (attention.photos_after.length == 0) {
+        errors++;
+    }
+
+    return errors > 0;
+}
+
+
+const validateBoard = board => {
+    let errors = 0;
+    board.itemsBoards.forEach(itemBoard => {
+        if (itemBoard.photos.length == 0) {
+            errors++;
+        }
+        if (itemBoard.item.hasValue && itemBoard.value <= 0) {
+            errors++;
+        }
+    });
+    return errors > 0;
+}
+
+const getDateReport = () => {
+    var date = new Date();
+    var dateStr =
+        ("00" + (date.getMonth() + 1)).slice(-2) + "/" +
+        ("00" + date.getDate()).slice(-2) + "/" +
+        date.getFullYear() + " " +
+        ("00" + date.getHours()).slice(-2) + ":" +
+        ("00" + date.getMinutes()).slice(-2) + ":" +
+        ("00" + date.getSeconds()).slice(-2);
+    return dateStr
+}
+
 module.exports = {
     createToken,
     asyncForEach,
     verifyItemBoard,
     makedId,
     fileExtension,
-    sendEmailBoard,
+    sendEmailProject,
     sendEmailAttention,
+    validateAttention,
+    validateBoard,
+    getDateReport,
 };

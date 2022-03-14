@@ -1,4 +1,4 @@
-exports.emailCloseBoard = (customer, attachments) => {
+exports.emailProject = (customer, project, link) => {
     var nodemailer = require("nodemailer");
     nodemailer.createTestAccount((err, account) => {
 
@@ -10,15 +10,18 @@ exports.emailCloseBoard = (customer, attachments) => {
             }
         });
 
-        let html = `<h1>Correo de cierre tablero</h1>
+        let html = `
         <h2>Hola ${customer.name}</h2>
-        <p>El tablero fue cerrado exitosamente para mas información ver el archivo adjunto</p>
+        <p>El proyecto <b>${project.name}</b> fue cerrado exitosamente para mas información</p>
+        <p>
+            Para ver el resumen de los tableros por favor visite el siguiente enlace: <br /><br />
+            ${link}
+        </p>
         </div>`
         let mailOptions = {
             from: `"Cierre de tablero" <${customer.email}>`,
             to: customer.email,
             subject: '📎',
-            attachments,
             html,
         }
 

@@ -9,6 +9,9 @@ const bcrypt = require("bcrypt");
 const authMiddleware = require("../middleware/auth");
 var mongoose = require('mongoose');
 const notification = require('../utils/notification');
+const config = require('./../config')
+const axios = require('axios').default;
+
 
 
 router.post('/', (req, res, next) => {
@@ -170,6 +173,7 @@ router.post('/createProject', async (req, res) => {
     let project = new schemas.Project({
       name: req.body.name,
       type: req.body.type,
+      observation: req.body.observation,
       customer: mongoose.Types.ObjectId(req.body.customer)
     });
     project.save();
@@ -267,21 +271,14 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 });
 
 router.post('/createAttention', upload.any("pictures"), async (req, res) => {
-  console.log(req.body);
-  console.log("---------------- files ----------------");
-  console.log(req.files);
-  console.log("---------------- file ----------------");
 
-  // let attention = new schemas.Attention({
-
-  // });
-  // await attention.save();
   try {
 
     let attention = new schemas.Attention({
       photos_before: [],
       photos_after: [],
       description: req.body.observations,
+      title: req.body.title,
       signature: "",
       status: "created",
       customer: mongoose.Types.ObjectId(req.body.customer),
@@ -325,38 +322,150 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
 
 router.post('/finishBoard', async (req, res) => {
   try {
-    schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-      $set: {
-        status: 'finished'
-      }
-    }, {
-      multi: true
+    let board = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.id),).populate({
+      path: 'itemsBoards',
+      match: { status: "activo" },
+      populate: [{
+        path: "item",
+
+      }]
     }).exec();
 
+    // console.log(JSON.stringify(board, null, 4))
 
-    let board = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.id));
-    let users = await schemas.User.find({ role: 'administrator' });
+    console.log(fn.validateBoard(board));
 
-    let data = {
-      "type": "board",
-      board
+    if (fn.validateBoard(board)) {
+      schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          status: 'finished'
+        }
+      }, {
+        multi: true
+      }).exec();
+
+
+      let users = await schemas.User.find({ role: 'administrator' });
+
+
+      let registration_ids = [];
+      users.forEach(user => {
+        if (user.token) {
+          registration_ids.push(user.token);
+        }
+        // notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
+      });
+
+      await fn.sendEmailBoard(req.body.id);
+
+      res.json({
+        status: 'success',
+        message: 'Tablero finalizado exitosamente'
+      });
+    } else {
+      res.json({
+        status: 'error',
+        message: 'No se puede finalizar, porque el tablero se encuentra incompleto'
+      });
     }
-
-
-    let registration_ids = [];
-    users.forEach(user => {
-      if (user.token) {
-        registration_ids.push(user.token);
-      }
-      notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al finalizar el tablero'
     });
+  }
+});
 
-    await fn.sendEmailBoard(req.body.id);
+router.post('/finishProject', async (req, res) => {
+  try {
+    let project = await schemas.Project.findById(mongoose.Types.ObjectId(req.body.id),).populate({
+      path: 'boards',
+      populate: [{
+        path: 'itemsBoards',
+        match: { status: "activo" },
+        populate: [{
+          path: "item",
+        }]
+      }]
+    }).populate({
+      path: 'customer',
+      select: { _id: 0, name: 1 }
+    }).exec();
+
+    let newBoards = project.boards.map(board => {
+
+      let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
+      let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
+      let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
+      let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
+
+      let cellsBefore = tmpCellsBefore.map(cellBefore => {
+        if (cellBefore.photos.length == 0) {
+          cellBefore.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellBefore
+      });
+      let cellsVoltaje = tmpCellsVoltaje.map(cellVoltaje => {
+        if (cellVoltaje.photos.length == 0) {
+          cellVoltaje.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellVoltaje
+      });
+      let cellsCorriente = tmpCellsCorriente.map(cellCorriente => {
+        if (cellCorriente.photos.length == 0) {
+          cellCorriente.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellCorriente
+      });
+      let cellsAfter = tmpCellsAfter.map(cellAfter => {
+        if (cellAfter.photos.length == 0) {
+          cellAfter.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellAfter
+      });
+
+      let newBoard = {
+        cellsBefore,
+        cellsVoltaje,
+        cellsCorriente,
+        cellsAfter,
+        boardName: board.name,
+        observation: board.observation,
+
+      }
+      // data.push(newBoard)
+      return newBoard;
+
+    })
+    let newProject = {
+      date: fn.getDateReport(),
+      name: project.name,
+      type: project.type === 'tri' ? 'Trifásico' : 'Monofásico',
+      customer: project.customer,
+      boards: newBoards,
+    }
+    console.log(JSON.stringify(newProject, null, 6))
+
+
 
     res.json({
       status: 'success',
       message: 'Tablero finalizado exitosamente'
     });
+
   } catch (error) {
     console.log(error);
     res.json({
@@ -369,36 +478,45 @@ router.post('/finishBoard', async (req, res) => {
 router.post('/finishAttention', async (req, res) => {
   try {
 
-    schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-      $set: {
-        status: 'finished'
-      }
-    }, {
-      multi: true
-    }).exec();
-
     let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id));
-    let users = await schemas.User.find({ role: 'administrator' });
 
-    let data = {
-      "type": "attention",
-      attention
-    }
+    if (!fn.validateAttention(attention)) {
+      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          status: 'finished'
+        }
+      }, {
+        multi: true
+      }).exec();
 
-    let registration_ids = [];
-    users.forEach(user => {
-      if (user.token) {
-        registration_ids.push(user.token);
+
+      let users = await schemas.User.find({ role: 'administrator' });
+
+      let data = {
+        "type": "attention",
+        attention
       }
-      notification.sendNotification('', registration_ids, 'Tablero finalizado', `La atención ${attention.description} ha finalizado`, data);
-    });
 
-    await fn.sendEmailAttention(req.body.id);
+      let registration_ids = [];
+      users.forEach(user => {
+        if (user.token) {
+          registration_ids.push(user.token);
+        }
+        notification.sendNotification('', registration_ids, 'Tablero finalizado', `La atención ${attention.description} ha finalizado`, data);
+      });
 
-    res.json({
-      status: 'success',
-      message: 'Atención finalizada exitosamente'
-    });
+      await fn.sendEmailAttention(req.body.id);
+
+      res.json({
+        status: 'success',
+        message: 'Atención finalizada exitosamente'
+      });
+    } else {
+      res.json({
+        status: 'error',
+        message: 'No se puede finalizar, porque la atencion se encuentra incompleta'
+      });
+    }
 
   } catch (error) {
     console.log(error);
@@ -836,7 +954,6 @@ router.post('/sendEmailAttention', async (req, res) => {
   });
 });
 
-
 router.post('/createCustomer', async (req, res) => {
 
   console.log('asdkaldadldlfjaldfjlasdjlsjfldajflkasdjklalfkajlk')
@@ -886,6 +1003,129 @@ router.post('/updateCustomer', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.json({ status: 'error' });
+  }
+});
+
+router.post('/saveObservations', async (req, res) => {
+  console.log(req.body)
+  try {
+
+    schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        observation: req.body.observations,
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Proyecto actualizado exitosamente' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrio un error al actualizar' });
+  }
+});
+
+router.post('/sendReportProject', async (req, res) => {
+  try {
+    let project = await schemas.Project.findById(mongoose.Types.ObjectId(req.body.id),).populate({
+      path: 'boards',
+      populate: [{
+        path: 'itemsBoards',
+        match: { status: "activo" },
+        populate: [{
+          path: "item",
+        }]
+      }]
+    }).populate({
+      path: 'customer',
+      select: { _id: 0, name: 1 }
+    }).exec();
+
+    let newBoards = project.boards.map(board => {
+
+      let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
+      let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
+      let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
+      let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
+
+      let cellsBefore = tmpCellsBefore.map(cellBefore => {
+        if (cellBefore.photos.length == 0) {
+          cellBefore.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellBefore
+      });
+      let cellsVoltaje = tmpCellsVoltaje.map(cellVoltaje => {
+        if (cellVoltaje.photos.length == 0) {
+          cellVoltaje.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellVoltaje
+      });
+      let cellsCorriente = tmpCellsCorriente.map(cellCorriente => {
+        if (cellCorriente.photos.length == 0) {
+          cellCorriente.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellCorriente
+      });
+      let cellsAfter = tmpCellsAfter.map(cellAfter => {
+        if (cellAfter.photos.length == 0) {
+          cellAfter.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellAfter
+      });
+
+      let newBoard = {
+        cellsBefore,
+        cellsVoltaje,
+        cellsCorriente,
+        cellsAfter,
+        boardName: board.name,
+        observation: board.observation,
+
+      }
+      return newBoard;
+
+    })
+    let data = {
+      id: project._id,
+      date: fn.getDateReport(),
+      name: project.name,
+      type: project.type === 'tri' ? 'Trifásico' : 'Monofásico',
+      customer: project.customer,
+      boards: newBoards,
+      pathServicePhp: config.pathSavePdf
+    }
+
+    axios.post(config.pathServicePhp, data)
+      .then(async (response) => {
+        await fn.sendEmailProject(response.data.data.id);
+
+        res.json({
+          status: 'success',
+          data: data,
+          message: 'Reporte enviado exitosamente'
+        });
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al enviar el reporte'
+    });
   }
 });
 

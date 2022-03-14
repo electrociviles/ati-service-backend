@@ -64,6 +64,7 @@ var User = mongoose.model('User', UserSchema);
 var ProjectSchema = new mongoose.Schema({
     name: String,
     type: String,
+    observation: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],
 });
@@ -110,6 +111,7 @@ var Board = mongoose.model('Board', BoardSchema);
 var AttentionSchema = new mongoose.Schema({
     photos_before: [],
     photos_after: [],
+    title: String,
     description: String,
     signature: String,
     status: String,
