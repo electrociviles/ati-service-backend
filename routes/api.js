@@ -851,8 +851,8 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
         });
       }
 
-      const salt = await bcrypt.genSalt(10);
-      let password = await bcrypt.hash(req.body.password, salt);
+      // const salt = await bcrypt.genSalt(10);
+      // let password = await bcrypt.hash(req.body.password, salt);
 
       let user = schemas.User({
         name: req.body.name,
@@ -860,7 +860,7 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
         document_number: req.body.documentNumber,
         role: req.body.role,
         photo: fileName,
-        password: password,
+        password: req.body.password,
         status: 'activo'
       });
       await user.save()
