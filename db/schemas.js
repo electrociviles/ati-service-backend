@@ -115,6 +115,8 @@ var AttentionSchema = new mongoose.Schema({
     description: String,
     signature: String,
     status: String,
+    names: String,
+    document: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     presave: Boolean,
 });

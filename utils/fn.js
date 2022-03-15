@@ -199,6 +199,22 @@ const validateBoard = board => {
     return errors > 0;
 }
 
+const validateProject = project => {
+    let errors = 0;
+    project.boards.forEach(board => {
+        board.itemsBoards.forEach(itemBoard => {
+            if (itemBoard.photos.length == 0) {
+                errors++;
+            }
+            if (itemBoard.item.hasValue && itemBoard.value <= 0) {
+                errors++;
+            }
+        });
+    });
+    return errors > 0;
+}
+
+
 const getDateReport = () => {
     var date = new Date();
     var dateStr =
@@ -222,4 +238,5 @@ module.exports = {
     validateAttention,
     validateBoard,
     getDateReport,
+    validateProject,
 };

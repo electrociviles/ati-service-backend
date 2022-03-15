@@ -279,6 +279,8 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       photos_after: [],
       description: req.body.observations,
       title: req.body.title,
+      names: req.body.name,
+      document: req.body.document,
       signature: "",
       status: "created",
       customer: mongoose.Types.ObjectId(req.body.customer),
@@ -330,10 +332,6 @@ router.post('/finishBoard', async (req, res) => {
 
       }]
     }).exec();
-
-    // console.log(JSON.stringify(board, null, 4))
-
-    console.log(fn.validateBoard(board));
 
     if (fn.validateBoard(board)) {
       schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
@@ -631,8 +629,11 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         description: req.body.observations,
+        title: req.body.title,
         customer: mongoose.Types.ObjectId(req.body.customer),
         signature: fileNameSign,
+        names: req.body.name,
+        document: req.body.document,
       }
     }, {
       upsert: true
@@ -1128,6 +1129,83 @@ router.post('/sendReportProject', async (req, res) => {
       status: 'error',
       message: 'Ocurrió un error al enviar el reporte'
     });
+  }
+});
+
+router.post('/updateObservationBoard', async (req, res) => {
+  console.log(req.body);
+
+  try {
+
+    schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        observation: req.body.observations,
+      }
+    }, {
+      upsert: true
+    }).exec();
+
+    res.json({ status: 'success', message: 'Observación actualizada exitosamente' });
+
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: 'Ocurrió un error al actualizar' });
+  }
+});
+router.post('/removeImageFromAttentionItem', async (req, res) => {
+  console.log(req.body);
+
+  try {
+
+    let attention = await schemas.Attention.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+    if (req.body.type == 'before') {
+      let photos = attention.photos_before.filter(item => item != req.body.url)
+      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          photos_before: photos,
+        }
+      }, {
+        upsert: true
+      }).exec();
+    } else {
+      let photos = attention.photos_after.filter(item => item != req.body.url)
+      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          photos_after: photos,
+        }
+      }, {
+        upsert: true
+      }).exec();
+    }
+
+    res.json({ status: 'success', message: 'Imagen eliminada exitosamente' });
+
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: 'Ocurrió un error al actualizar' });
+  }
+
+});
+
+router.post('/removeImageFromBoardItem', async (req, res) => {
+
+  try {
+
+    let itemBoard = await schemas.ItemBoard.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+    let photos = itemBoard.photos.filter(item => item.url != req.body.url)
+    schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        photos,
+      }
+    }, {
+      upsert: true
+    }).exec();
+
+    res.json({ status: 'success', message: 'Imagen eliminada exitosamente' });
+
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: 'Ocurrió un error al actualizar' });
   }
 });
 
