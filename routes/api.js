@@ -342,7 +342,6 @@ router.post('/finishBoard', async (req, res) => {
         multi: true
       }).exec();
 
-
       let users = await schemas.User.find({ role: 'administrator' });
 
 
@@ -473,58 +472,6 @@ router.post('/finishProject', async (req, res) => {
   }
 });
 
-router.post('/finishAttention', async (req, res) => {
-  try {
-
-    let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id));
-
-    if (!fn.validateAttention(attention)) {
-      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-        $set: {
-          status: 'finished'
-        }
-      }, {
-        multi: true
-      }).exec();
-
-
-      let users = await schemas.User.find({ role: 'administrator' });
-
-      let data = {
-        "type": "attention",
-        attention
-      }
-
-      let registration_ids = [];
-      users.forEach(user => {
-        if (user.token) {
-          registration_ids.push(user.token);
-        }
-        notification.sendNotification('', registration_ids, 'Tablero finalizado', `La atención ${attention.description} ha finalizado`, data);
-      });
-
-      await fn.sendEmailAttention(req.body.id);
-
-      res.json({
-        status: 'success',
-        message: 'Atención finalizada exitosamente'
-      });
-    } else {
-      res.json({
-        status: 'error',
-        message: 'No se puede finalizar, porque la atencion se encuentra incompleta'
-      });
-    }
-
-  } catch (error) {
-    console.log(error);
-    res.json({
-      status: 'error',
-      message: 'Ocurrió un error al finalizar la atención'
-    });
-  }
-});
-
 router.post('/openAttention', async (req, res) => {
   try {
 
@@ -576,10 +523,6 @@ router.post('/closeAttention', async (req, res) => {
 });
 
 router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
-  console.log(req.body);
-  console.log("---------------- files ----------------");
-  console.log(req.files);
-  console.log("---------------- file ----------------");
 
   try {
 
@@ -666,10 +609,6 @@ router.post('/getInfoUser', async (req, res) => {
 
 router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
   try {
-    console.log(req.body);
-    console.log("---------------- files ----------------");
-    console.log(req.files);
-    console.log("---------------- file ----------------");
 
     let fileName = 'default.png';
     await fn.asyncForEach(req.files, async (file) => {
@@ -813,7 +752,6 @@ router.post('/updateUser', upload.any("photo"), async (req, res) => {
 });
 
 router.post('/createUser', upload.any("photo"), async (req, res) => {
-
 
   let usr = await schemas.User.findOne({ 'document_number': req.body.documentNumber })
   if (!usr) {
@@ -1107,8 +1045,6 @@ router.post('/sendReportProject', async (req, res) => {
       pathServicePhp: config.pathSavePdf
     }
 
-    console.log(JSON.stringify(data, null, 4))
-
     axios.post(config.pathServicePhp, data)
       .then(async (response) => {
 
@@ -1134,6 +1070,101 @@ router.post('/sendReportProject', async (req, res) => {
   }
 });
 
+router.post('/finishAttention', async (req, res) => {
+  try {
+
+    let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id));
+
+    if (!fn.validateAttention(attention)) {
+      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          status: 'finished'
+        }
+      }, {
+        multi: true
+      }).exec();
+
+      // let users = await schemas.User.find({ role: 'administrator' });
+
+      // let info = {
+      //   "type": "attention",
+      //   attention
+      // }
+
+      // let registration_ids = [];
+      // users.forEach(user => {
+      //   if (user.token) {
+      //     registration_ids.push(user.token);
+      //   }
+      //   notification.sendNotification('', registration_ids, 'Tablero finalizado', `La atención ${attention.description} ha finalizado`, info);
+      // });
+
+
+      let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id)).populate({
+        path: 'customer'
+      }).exec();
+
+      let newPhotosBefore = attention.photos_before.map(element => {
+        if (element.length == 0) {
+          element = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return element;
+      });
+      attention.photos_before = newPhotosBefore;
+
+      let newPhotosAfter = attention.photos_after.map(element => {
+        if (element.length == 0) {
+          element = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return element;
+      });
+      attention.photos_after = newPhotosAfter;
+
+
+
+      let data = {
+        date: fn.getDateReport(),
+        attention: attention,
+        pathServicePhp: config.pathSavePdf
+      }
+
+      axios.post(config.pathServicePhp + 'attention.php', data)
+        .then(async (response) => {
+
+          console.log(response.data)
+          await fn.sendEmailAttention(attention._id);
+
+          res.json({
+            status: 'success',
+            message: 'Reporte enviado exitosamente'
+          });
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
+
+    } else {
+      res.json({
+        status: 'error',
+        message: 'No se puede finalizar, porque la atencion se encuentra incompleta'
+      });
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al finalizar la atención'
+    });
+  }
+});
+
 router.post('/updateObservationBoard', async (req, res) => {
   console.log(req.body);
 
@@ -1154,6 +1185,7 @@ router.post('/updateObservationBoard', async (req, res) => {
     res.json({ status: 'error', message: 'Ocurrió un error al actualizar' });
   }
 });
+
 router.post('/removeImageFromAttentionItem', async (req, res) => {
   console.log(req.body);
 

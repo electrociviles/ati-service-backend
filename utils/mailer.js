@@ -35,7 +35,7 @@ exports.emailProject = (customer, project, link) => {
 
     })
 }
-exports.emailCloseAttention = (attention, attachments) => {
+exports.emailAttention = (attention, attachments) => {
     var nodemailer = require("nodemailer");
     nodemailer.createTestAccount((err, account) => {
 
@@ -48,7 +48,7 @@ exports.emailCloseAttention = (attention, attachments) => {
         });
 
 
-        let html = `<h1>Correo de cierre tablero</h1>
+        let html = `<h1>Atención finalizada</h1>
         <h2>Hola ${attention.customer.name}</h2>
         <p>La atención fue cerrada exitosamente para mas información ver el archivo adjunto</p>
         </div>`

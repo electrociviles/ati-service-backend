@@ -99,66 +99,30 @@ const sendEmailProject = id => {
 const sendEmailAttention = id => {
 
     return new Promise(async (resolve, reject) => {
-        const client = require("jsreport-client")("http://127.0.0.1:4013", "binariox", "system")
         try {
 
-            let shortid = 'HklnmnRtb9';
             let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(id),).populate({
                 path: 'customer'
             }).exec();
 
+            const HummusRecipe = require('hummus-recipe');
 
-            let newPhotosBefore = attention.photos_before.map(element => {
-                if (element.length == 0) {
-                    element = [{
-                        url: 'default.png',
-                        type: 'remote'
-                    }]
-                }
-                return element;
-            });
-            attention.photos_before = newPhotosBefore;
+            let path = `${config.pathSavePdf}${id}.pdf`;
+            const pdfBase64 = fs.readFileSync(path, { encoding: 'base64' });
 
-            let newPhotosAfter = attention.photos_after.map(element => {
-                if (element.length == 0) {
-                    element = [{
-                        url: 'default.png',
-                        type: 'remote'
-                    }]
-                }
-                return element;
-            });
-            attention.photos_after = newPhotosAfter;
+            let attachments = [
+                {
+                    filename: 'Cierre atención ' + attention._id + '.pdf',
+                    content: pdfBase64,
+                    encoding: 'base64'
+                },
+            ];
+            mailer.emailAttention(attention, attachments);
 
+            resolve(true);
 
-            console.log(JSON.stringify(attention, null, 4))
+            resolve(true);
 
-
-            async function render() {
-                const response = await client.render({
-                    template:
-                    {
-                        shortid: shortid,
-                        ecipe: 'html',
-                        engine: 'handlebars'
-                    },
-                    data: attention
-                })
-                const bodyBuffer = await response.body()
-                var pdfBase64 = Buffer.from(bodyBuffer, 'binary').toString('base64');
-
-                let attachments = [
-                    {
-                        filename: 'Cierre atención ' + attention._id + '.pdf',
-                        content: pdfBase64,
-                        encoding: 'base64'
-                    },
-                ];
-                mailer.emailCloseAttention(attention, attachments);
-
-                resolve(true);
-            }
-            render().catch(console.error)
 
         } catch (error) {
             console.log(error);
