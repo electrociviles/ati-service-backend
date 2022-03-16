@@ -350,10 +350,10 @@ router.post('/finishBoard', async (req, res) => {
         if (user.token) {
           registration_ids.push(user.token);
         }
-        // notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
+        notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
       });
 
-      await fn.sendEmailBoard(req.body.id);
+      // await fn.sendEmailBoard(req.body.id);
 
       res.json({
         status: 'success',
@@ -1045,7 +1045,7 @@ router.post('/sendReportProject', async (req, res) => {
       pathServicePhp: config.pathSavePdf
     }
 
-    axios.post(config.pathServicePhp, data)
+    axios.post(config.pathServicePhp + 'project.php', data)
       .then(async (response) => {
 
         console.log(response.data)
