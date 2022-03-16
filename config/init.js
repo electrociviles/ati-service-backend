@@ -470,6 +470,23 @@ exports.Start = function () {
 
     var item = {
         mode: 'after',
+        title: "Galeria despues de manteniento",
+        description: "",
+        type: "circuit_marking",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    var item = {
+        mode: 'after',
         title: "Foto protección principal",
         description: "",
         type: "principal_protection",
