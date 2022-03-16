@@ -1113,7 +1113,7 @@ router.post('/sendReportProject', async (req, res) => {
       .then(async (response) => {
 
         console.log(response.data)
-        // await fn.sendEmailProject(response.data.data.id);
+        await fn.sendEmailProject(response.data.data.id);
 
         res.json({
           status: 'success',
