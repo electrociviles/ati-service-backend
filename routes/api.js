@@ -1111,7 +1111,9 @@ router.post('/sendReportProject', async (req, res) => {
 
     axios.post(config.pathServicePhp, data)
       .then(async (response) => {
-        await fn.sendEmailProject(response.data.data.id);
+
+        console.log(response.data)
+        // await fn.sendEmailProject(response.data.data.id);
 
         res.json({
           status: 'success',
