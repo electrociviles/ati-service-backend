@@ -333,7 +333,7 @@ router.post('/finishBoard', async (req, res) => {
       }]
     }).exec();
 
-    if (fn.validateBoard(board)) {
+    if (!fn.validateBoard(board)) {
       schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
         $set: {
           status: 'finished'
