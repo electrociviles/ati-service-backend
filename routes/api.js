@@ -214,32 +214,32 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 
 
   try {
-    // await fn.asyncForEach(req.files, async (file, index) => {
-    //   let src = fs.createReadStream(file.path);
-    //   let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-    //   let outStream = await fs.createWriteStream('./uploads/' + fileName);
-    //   src.pipe(outStream);
+    await fn.asyncForEach(req.files, async (file, index) => {
+      let src = fs.createReadStream(file.path);
+      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      let outStream = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(outStream);
 
-    //   src.on('end', async () => {
-    //     console.log('end');
-    //     fs.unlinkSync(file.path);
+      src.on('end', async () => {
+        console.log('end');
+        fs.unlinkSync(file.path);
 
-    //     const Jimp = require('jimp');
-    //     const image = await Jimp.read('./uploads/' + fileName);
-    //     await image.resize(400, Jimp.AUTO);
-    //     await image.quality(50);
-    //     await image.writeAsync('./uploads/' + fileName);
+        const Jimp = require('jimp');
+        const image = await Jimp.read('./uploads/' + fileName);
+        await image.resize(400, Jimp.AUTO);
+        await image.quality(50);
+        await image.writeAsync('./uploads/' + fileName);
 
-    //   });
-    //   src.on('error', (err) => {
-    //     console.log(err)
-    //   });
-    //   schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-    //     $push: { photos: { url: fileName, type: 'remote' } }
-    //   }, {
-    //     multi: true
-    //   }).exec();
-    // });
+      });
+      src.on('error', (err) => {
+        console.log(err)
+      });
+      schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+        $push: { photos: { url: fileName, type: 'remote' } }
+      }, {
+        multi: true
+      }).exec();
+    });
     for (var key in req.body) {
       if (key.length == 24 && parseFloat(req.body[key]) > 0) {
         console.log('key ', key);
@@ -333,7 +333,7 @@ router.post('/finishBoard', async (req, res) => {
       }]
     }).exec();
 
-    if (!fn.validateBoard(board)) {
+    if (fn.validateBoard(board)) {
       schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
         $set: {
           status: 'finished'
@@ -519,46 +519,6 @@ router.post('/closeAttention', async (req, res) => {
       status: 'error',
       message: 'Ocurrió un error al abrir la atención'
     });
-  }
-});
-
-router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
-  console.log(req.body)
-  console.log(req.files)
-  try {
-    await fn.asyncForEach(req.files, async (file) => {
-      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      console.log(fileName);
-      let src = await fs.createReadStream(file.path);
-      let dest = await fs.createWriteStream('./uploads/' + fileName);
-      src.pipe(dest);
-      src.on('end', async () => {
-        fs.unlinkSync(file.path);
-
-        const Jimp = require('jimp');
-        const image = await Jimp.read('./uploads/' + fileName);
-        await image.resize(400, Jimp.AUTO);
-        await image.quality(50);
-        await image.writeAsync('./uploads/' + fileName);
-
-        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-          $push: { photos: { url: fileName, type: 'remote' } }
-        }, {
-          upsert: true
-        }).exec();
-
-        res.json({ status: 'success' });
-
-      });
-      src.on('error', (err) => {
-        console.log(err);
-        res.json({ status: 'error' });
-      });
-    });
-
-  } catch (error) {
-    console.log(error);
-    res.json({ status: 'error' });
   }
 });
 
