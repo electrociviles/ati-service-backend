@@ -345,13 +345,13 @@ router.post('/finishBoard', async (req, res) => {
       let users = await schemas.User.find({ role: 'administrator' });
 
 
-      let registration_ids = [];
-      users.forEach(user => {
-        if (user.token) {
-          registration_ids.push(user.token);
-        }
-        notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
-      });
+      // let registration_ids = [];
+      // users.forEach(user => {
+      //   if (user.token) {
+      //     registration_ids.push(user.token);
+      //   }
+      //   notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
+      // });
 
       // await fn.sendEmailBoard(req.body.id);
 
