@@ -59,6 +59,7 @@ UserSchema.pre('save', async function (next) {
         return next(e);
     }
 });
+
 var User = mongoose.model('User', UserSchema);
 
 var ProjectSchema = new mongoose.Schema({
@@ -67,13 +68,26 @@ var ProjectSchema = new mongoose.Schema({
     observation: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],
+    aroundItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
+    outletSampling: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
 });
 var Project = mongoose.model('Project', ProjectSchema);
+
+
+var ItemImageSchema = new mongoose.Schema({
+    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
+    photos: [],
+    status: String,
+    value: mongoose.Schema.Types.Double,
+});
+var ItemImage = mongoose.model('Item_Image', ItemImageSchema);
 
 var ItemSchema = new mongoose.Schema({
     mode: String,
     title: String,
     description: String,
+    group: String,
     type: String,
     gallery: Boolean,
     hasValue: Boolean,
@@ -93,6 +107,8 @@ var ItemBoardSchema = new mongoose.Schema({
     item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
     photos: [],
     status: String,
+    observations: String,
+    title: String,
     value: mongoose.Schema.Types.Double,
 });
 var ItemBoard = mongoose.model('Item_Board', ItemBoardSchema);
@@ -109,8 +125,7 @@ var Board = mongoose.model('Board', BoardSchema);
 
 
 var AttentionSchema = new mongoose.Schema({
-    photos_before: [],
-    photos_after: [],
+    attentionItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     title: String,
     description: String,
     signature: String,
@@ -132,5 +147,6 @@ var schemas =
     ItemBoard,
     User,
     Attention,
+    ItemImage,
 };
 module.exports = schemas;

@@ -20,6 +20,7 @@ exports.Start = function () {
     var item = {
         mode: 'tri',
         title: "Voltaje R-S",
+        group: 'board',
         description: "",
         type: "voltaje",
         gallery: false,
@@ -37,6 +38,7 @@ exports.Start = function () {
     var item = {
         mode: 'tri',
         title: "Voltaje R-T",
+        group: 'board',
         description: "",
         type: "voltaje",
         gallery: false,
@@ -55,6 +57,7 @@ exports.Start = function () {
     var item = {
         mode: 'tri',
         title: "Voltaje S-T",
+        group: 'board',
         description: "",
         type: "voltaje",
         gallery: false,
@@ -73,6 +76,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "Voltaje R-N",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -90,6 +94,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "Voltaje S-N",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -107,6 +112,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "Voltaje T-N",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -124,6 +130,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "Voltaje N-t",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -143,6 +150,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "Voltaje Fase 1 - Fase 2",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -160,6 +168,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "Voltaje Fase 1 - N",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -177,6 +186,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "Voltaje Fase 2 - N",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -194,6 +204,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "Voltaje N - t",
         description: "",
+        group: 'board',
         type: "voltaje",
         gallery: false,
         hasValue: true,
@@ -212,6 +223,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "R",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -229,6 +241,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "S",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -246,6 +259,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "T",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -263,6 +277,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "N",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -280,6 +295,7 @@ exports.Start = function () {
         mode: 'tri',
         title: "t",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -299,6 +315,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "Fase 1",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -316,6 +333,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "Fase 2",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -333,6 +351,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "N",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -350,6 +369,7 @@ exports.Start = function () {
         mode: 'mono',
         title: "t",
         description: "",
+        group: 'board',
         type: "corriente",
         gallery: false,
         hasValue: true,
@@ -369,6 +389,7 @@ exports.Start = function () {
         mode: 'before',
         title: "Foto marcación tablero",
         description: "",
+        group: 'board',
         type: "board_marking",
         gallery: false,
         hasValue: false,
@@ -386,6 +407,7 @@ exports.Start = function () {
         mode: 'before',
         title: "Galeria antes mantenimiento",
         description: "",
+        group: 'board',
         type: "gallery_before_maintenance",
         gallery: true,
         hasValue: false,
@@ -403,6 +425,7 @@ exports.Start = function () {
         mode: 'before',
         title: "Termografía antes mantenimiento",
         description: "",
+        group: 'board',
         type: "thermography_before",
         placeHolder: "Grados",
         hasValue: true,
@@ -421,6 +444,7 @@ exports.Start = function () {
         mode: 'general',
         title: "Galeria despues mantenimiento",
         description: "",
+        group: 'board',
         type: "gallery_after_maintenance",
         gallery: true,
         hasValue: false,
@@ -438,7 +462,8 @@ exports.Start = function () {
         mode: 'after',
         title: "Termografía despues",
         description: "",
-        type: "degress_termographi",
+        group: 'board',
+        type: "degress_termography",
         gallery: false,
         hasValue: true,
         placeHolder: "",
@@ -455,6 +480,7 @@ exports.Start = function () {
         mode: 'after',
         title: "Galeria marcación circuito",
         description: "",
+        group: 'board',
         type: "circuit_marking",
         gallery: true,
         hasValue: false,
@@ -472,6 +498,7 @@ exports.Start = function () {
         mode: 'after',
         title: "Galeria despues de manteniento",
         description: "",
+        group: 'board',
         type: "circuit_marking",
         gallery: true,
         hasValue: false,
@@ -489,6 +516,7 @@ exports.Start = function () {
         mode: 'after',
         title: "Foto protección principal",
         description: "",
+        group: 'board',
         type: "principal_protection",
         gallery: false,
         hasValue: false,
@@ -504,8 +532,9 @@ exports.Start = function () {
 
     var item = {
         mode: 'after',
-        title: "Foto de Diagrama unifilar",
+        title: "Foto de Diagrama Unifilar",
         description: "",
+        group: 'board',
         type: "single_line_diagram",
         gallery: false,
         hasValue: false,
@@ -522,9 +551,10 @@ exports.Start = function () {
     /** Items attention */
     var item = {
         mode: 'attention',
-        title: "Fotos antes mantenimiento",
+        title: "Fotos antes de la atención",
         description: "",
-        type: "attention_before",
+        group: 'attention',
+        type: "before",
         gallery: false,
         hasValue: false,
         placeHolder: "",
@@ -539,9 +569,28 @@ exports.Start = function () {
 
     var item = {
         mode: 'attention',
-        title: "Fotos despuest mantenimiento",
+        title: "Fotos despues de la atención",
         description: "",
-        type: "attention_after",
+        group: 'attention',
+        type: "after",
+        gallery: false,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    var item = {
+        mode: 'around',
+        title: "Fotos antes",
+        description: "",
+        group: 'around',
+        type: "before",
         gallery: false,
         hasValue: false,
         placeHolder: "",
@@ -555,11 +604,139 @@ exports.Start = function () {
     list.push(item);
 
 
-    // Items.collection.insert(list, function () { });
+    var item = {
+        mode: 'around',
+        title: "Fotos despues",
+        description: "",
+        group: 'around',
+        type: "after",
+        gallery: false,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    /** Outlet sampling  */
+    var item = {
+        mode: 'outletSampling',
+        title: "Muestreo toma 1",
+        description: "",
+        group: 'outletSampling',
+        type: "before",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    var item = {
+        mode: 'outletSampling',
+        title: "Muestreo toma 2",
+        description: "",
+        group: 'outletSampling',
+        type: "before",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    var item = {
+        mode: 'outletSampling',
+        title: "Muestreo toma 3",
+        description: "",
+        group: 'outletSampling',
+        type: "before",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    var item = {
+        mode: 'outletSampling',
+        title: "Muestreo toma 4",
+        description: "",
+        group: 'outletSampling',
+        type: "before",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+    var item = {
+        mode: 'outletSampling',
+        title: "Muestreo toma 5",
+        description: "",
+        group: 'outletSampling',
+        type: "before",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+
+    var item = {
+        mode: 'finding',
+        title: "Hallazgos",
+        description: "",
+        group: 'finding',
+        type: "finding",
+        gallery: true,
+        hasValue: false,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+
+
     Item.insertMany(list).then(function () {
-        console.log("Data inserted")  // Success
+        console.log("Data inserted")
     }).catch(function (error) {
-        console.log(error)      // Failure
+        console.log(error)
     });
 }
 
