@@ -1449,37 +1449,38 @@ router.post('/removeImageFromAttentionItem', async (req, res) => {
 router.post('/removeImage', async (req, res) => {
   console.log(req.body);
 
-  //Board 
-  // {
-  //   id: '6237e10f34867f017adee78d',
-  //   type: 'board_marking',
-  //   group: 'board',
-  //   mode: 'before',
-  //   url: 'Ras16GrWSZ.jpg'
-  // }
 
   try {
 
-    // let attention = await schemas.Attention.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
-    // if (req.body.type == 'before') {
-    //   let photos = attention.photos_before.filter(item => item != req.body.url)
-    //   schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-    //     $set: {
-    //       photos_before: photos,
-    //     }
-    //   }, {
-    //     upsert: true
-    //   }).exec();
-    // } else {
-    //   let photos = attention.photos_after.filter(item => item != req.body.url)
-    //   schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-    //     $set: {
-    //       photos_after: photos,
-    //     }
-    //   }, {
-    //     upsert: true
-    //   }).exec();
-    // }
+    switch (req.body.group) {
+      case 'board':
+
+        break;
+
+      default:
+        break;
+    }
+    let attention = await schemas.Attention.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+    if (req.body.type == 'before') {
+      let photos = attention.photos_before.filter(item => item != req.body.url)
+
+      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          photos_before: photos,
+        }
+      }, {
+        upsert: true
+      }).exec();
+    } else {
+      let photos = attention.photos_after.filter(item => item != req.body.url)
+      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          photos_after: photos,
+        }
+      }, {
+        upsert: true
+      }).exec();
+    }
 
     res.json({ status: 'success', message: 'Imagen eliminada exitosamente' });
 
