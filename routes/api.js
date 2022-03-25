@@ -366,9 +366,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
 
   console.log(req.body);
   try {
-    let attentionItems = [];
     items = await schemas.Item.find({ mode: { $in: ['attention'] } });
-
 
     let listAttentionImage = []
     await fn.asyncForEach(items, async item => {
@@ -772,6 +770,46 @@ router.post('/updateImageOutletSampling', upload.any("pictures"), async (req, re
 
   } catch (error) {
     console.log(error)
+    res.json({ status: 'error' });
+  }
+});
+
+router.post('/updateImageAttention', upload.any("pictures"), async (req, res) => {
+  console.log(req.body);
+  console.log(req.files);
+  try {
+    await fn.asyncForEach(req.files, async (file) => {
+      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      console.log(fileName);
+      let src = await fs.createReadStream(file.path);
+      let dest = await fs.createWriteStream('./uploads/' + fileName);
+      src.pipe(dest);
+      src.on('end', async () => {
+        fs.unlinkSync(file.path);
+
+        const Jimp = require('jimp');
+        const image = await Jimp.read('./uploads/' + fileName);
+        await image.resize(400, Jimp.AUTO);
+        await image.quality(50);
+        await image.writeAsync('./uploads/' + fileName);
+
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+          $push: { photos: { url: fileName, type: 'remote' } }
+        }, {
+          upsert: true
+        }).exec();
+
+        res.json({ status: 'success' });
+
+      });
+      src.on('error', (err) => {
+        console.log(err);
+        res.json({ status: 'error' });
+      });
+    });
+
+  } catch (error) {
+    console.log(error);
     res.json({ status: 'error' });
   }
 });
