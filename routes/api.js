@@ -125,6 +125,74 @@ router.post('/listBoards', authMiddleware, async (req, res) => {
   res.json({ status: 'success', boards });
 });
 
+router.post('/updatedBoard', async (req, res) => {
+  items = await schemas.Item.find({ mode: { $in: ['finding'] }, })
+
+  await fn.asyncForEach(items, async (item) => {
+    let itemBoard = schemas.ItemBoard({
+      board: mongoose.Types.ObjectId(req.body.board),
+      item: mongoose.Types.ObjectId(item._id),
+      status: 'activo',
+      photos: [],
+      value: 0.0,
+    });
+    await itemBoard.save();
+
+    schemas.Board.updateOne({ _id: mongoose.Types.ObjectId(req.body.board) }, {
+      $push: { itemsBoards: itemBoard }
+    }, {
+      multi: true
+    }).exec();
+  });
+
+
+
+
+  res.json({ status: 'success' });
+
+})
+router.post('/updatedProject', async (req, res) => {
+  items = await schemas.Item.find({ mode: { $in: ['around'] } });
+  console.log(items);
+
+  let aroundItems = [];
+  let outletSampling = [];
+  await fn.asyncForEach(items, async item => {
+    let itemImage = schemas.ItemImage({
+      project: mongoose.Types.ObjectId(req.body.project),
+      item: mongoose.Types.ObjectId(item._id),
+      status: 'activo',
+      photos: [],
+      value: 0.0,
+    });
+    await itemImage.save();
+    aroundItems.push(itemImage);
+  });
+
+
+  items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
+  await fn.asyncForEach(items, async item => {
+    let itemImage = schemas.ItemImage({
+      project: mongoose.Types.ObjectId(req.body.project),
+      item: mongoose.Types.ObjectId(item._id),
+      status: 'activo',
+      photos: [],
+      value: 0.0,
+    });
+    await itemImage.save();
+    outletSampling.push(itemImage);
+  });
+
+  schemas.Project.updateOne({ _id: mongoose.Types.ObjectId(req.body.project) }, {
+    $set: { aroundItems: aroundItems, outletSampling: outletSampling }
+  }, {
+    multi: true
+  }).exec();
+
+
+
+  res.json({ status: 'success' });
+})
 router.post('/createBoard', async (req, res) => {
 
   let itemsBoards = [];
@@ -223,7 +291,6 @@ router.post('/updateTitleItem', async (req, res) => {
   res.json({ status: 'success', message: "Proyecto registrado exitosamente.", });
 
 })
-
 
 router.post('/createProject', async (req, res) => {
 
