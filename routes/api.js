@@ -613,43 +613,43 @@ router.post('/closeAttention', async (req, res) => {
   }
 });
 
-router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
-  try {
-    await fn.asyncForEach(req.files, async (file) => {
-      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      console.log(fileName);
-      let src = await fs.createReadStream(file.path);
-      let dest = await fs.createWriteStream('./uploads/' + fileName);
-      src.pipe(dest);
-      src.on('end', async () => {
-        fs.unlinkSync(file.path);
+// router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
+//   try {
+//     await fn.asyncForEach(req.files, async (file) => {
+//       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+//       console.log(fileName);
+//       let src = await fs.createReadStream(file.path);
+//       let dest = await fs.createWriteStream('./uploads/' + fileName);
+//       src.pipe(dest);
+//       src.on('end', async () => {
+//         fs.unlinkSync(file.path);
 
-        const Jimp = require('jimp');
-        const image = await Jimp.read('./uploads/' + fileName);
-        await image.resize(400, Jimp.AUTO);
-        await image.quality(50);
-        await image.writeAsync('./uploads/' + fileName);
+//         const Jimp = require('jimp');
+//         const image = await Jimp.read('./uploads/' + fileName);
+//         await image.resize(400, Jimp.AUTO);
+//         await image.quality(50);
+//         await image.writeAsync('./uploads/' + fileName);
 
-        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-          $push: { photos: { url: fileName, type: 'remote' } }
-        }, {
-          upsert: true
-        }).exec();
+//         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+//           $push: { photos: { url: fileName, type: 'remote' } }
+//         }, {
+//           upsert: true
+//         }).exec();
 
-        res.json({ status: 'success' });
+//         res.json({ status: 'success' });
 
-      });
-      src.on('error', (err) => {
-        console.log(err);
-        res.json({ status: 'error' });
-      });
-    });
+//       });
+//       src.on('error', (err) => {
+//         console.log(err);
+//         res.json({ status: 'error' });
+//       });
+//     });
 
-  } catch (error) {
-    console.log(error);
-    res.json({ status: 'error' });
-  }
-});
+//   } catch (error) {
+//     console.log(error);
+//     res.json({ status: 'error' });
+//   }
+// });
 
 router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
   console.log(req.body)
@@ -676,7 +676,7 @@ router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) =>
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
 
       });
       src.on('error', (err) => {
@@ -716,7 +716,7 @@ router.post('/updateImageAround', upload.any("pictures"), async (req, res) => {
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
 
       });
       src.on('error', (err) => {
@@ -764,7 +764,7 @@ router.post('/updateImageOutletSampling', upload.any("pictures"), async (req, re
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
       });
     }
 
@@ -799,7 +799,7 @@ router.post('/updateImageAttention', upload.any("pictures"), async (req, res) =>
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
 
       });
       src.on('error', (err) => {
@@ -1449,38 +1449,43 @@ router.post('/removeImageFromAttentionItem', async (req, res) => {
 router.post('/removeImage', async (req, res) => {
   console.log(req.body);
 
-
+  let photos;
+  let itemImage;
   try {
 
     switch (req.body.group) {
       case 'board':
+        let itemBoard = await schemas.ItemBoard.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+        photos = itemBoard.photos.filter(item => item.url != req.body.url)
+        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: { photos }
+        }, { upsert: true }).exec();
+        break;
 
+      case 'around':
+        itemImage = await schemas.ItemImage.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+        photos = itemImage.photos.filter(item => item.url != req.body.url)
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: { photos }
+        }, { upsert: true }).exec();
+        break;
+
+      case 'outletSampling':
+        itemImage = await schemas.ItemImage.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+        photos = itemImage.photos.filter(item => item.url != req.body.url)
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: { photos }
+        }, { upsert: true }).exec();
         break;
 
       default:
         break;
     }
-    let attention = await schemas.Attention.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
-    if (req.body.type == 'before') {
-      let photos = attention.photos_before.filter(item => item != req.body.url)
 
-      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-        $set: {
-          photos_before: photos,
-        }
-      }, {
-        upsert: true
-      }).exec();
-    } else {
-      let photos = attention.photos_after.filter(item => item != req.body.url)
-      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-        $set: {
-          photos_after: photos,
-        }
-      }, {
-        upsert: true
-      }).exec();
-    }
+    if (req.body.url != 'default.png')
+      fs.unlinkSync('./uploads/' + req.body.url)
+
+
 
     res.json({ status: 'success', message: 'Imagen eliminada exitosamente' });
 
