@@ -37,7 +37,7 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-router.post('/listProjects', authMiddleware, async (req, res) => {
+router.post('/listProjects', async (req, res) => {
 
   var query = schemas.Project.find().populate({
     path: 'boards',
@@ -70,7 +70,7 @@ router.post('/listProjects', authMiddleware, async (req, res) => {
   res.json({ status: 'success', projects, count });
 });
 
-router.post('/listAttentions', authMiddleware, async (req, res) => {
+router.post('/listAttentions', async (req, res) => {
 
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
@@ -114,7 +114,7 @@ router.post('/listCustomers', async (req, res) => {
   res.json({ status: 'success', customers, count });
 });
 
-router.post('/listBoards', authMiddleware, async (req, res) => {
+router.post('/listBoards', async (req, res) => {
 
   console.log(req.body)
   var query = schemas.Board.find().sort({ '_id': 1 }).select();
@@ -1277,6 +1277,7 @@ router.post('/sendReportProject', async (req, res) => {
       let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
       let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
       let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
+      let tmpCellsAround = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'aroud')
 
       let cellsBefore = tmpCellsBefore.map(cellBefore => {
         if (cellBefore.photos.length == 0) {
@@ -1315,11 +1316,22 @@ router.post('/sendReportProject', async (req, res) => {
         return cellAfter
       });
 
+      let cellsAround = tmpCellsAround.map(cellAround => {
+        if (cellAround.photos.length == 0) {
+          cellAround.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellAround
+      });
+
       let newBoard = {
         cellsBefore,
         cellsVoltaje,
         cellsCorriente,
         cellsAfter,
+        cellsAround,
         boardName: board.name,
         observation: board.observation,
 
