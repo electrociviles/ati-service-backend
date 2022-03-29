@@ -1282,7 +1282,6 @@ router.post('/sendReportProject', async (req, res) => {
     }).exec();
 
 
-    console.log(project);
     let newBoards = project.boards.map(board => {
 
       let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
@@ -1366,6 +1365,9 @@ router.post('/sendReportProject', async (req, res) => {
     console.log('*****************************************************************');
     console.log(JSON.stringify(data, null, 6))
     console.log('*****************************************************************');
+
+    fs.unlinkSync(`./pdf/${project._id}.pdf`);
+
 
 
     axios.post(config.pathServicePhp + 'project.php', data)

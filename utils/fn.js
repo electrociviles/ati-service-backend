@@ -68,30 +68,23 @@ const sendEmailProject = id => {
     return new Promise(async (resolve, reject) => {
         try {
 
-            fs.unlink(`./pdf/${id}.pdf`, async (err) => {
-                if (err) {
-                    console.error(err)
-                }
-                let project = await schemas.Project.findById(mongoose.Types.ObjectId(id));
-                let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(project.customer));
 
-                const HummusRecipe = require('hummus-recipe');
-                const pdfDoc = new HummusRecipe(`./pdf/${id}.pdf`, `./pdf/${id}.pdf`);
+            let project = await schemas.Project.findById(mongoose.Types.ObjectId(id));
+            let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(project.customer));
 
-                pdfDoc.encrypt({
-                    userPassword: customer.nit,
-                    ownerPassword: customer.nit,
-                    userProtectionFlag: 4
-                }).endPDF();
+            const HummusRecipe = require('hummus-recipe');
+            const pdfDoc = new HummusRecipe(`./pdf/${id}.pdf`, `./pdf/${id}.pdf`);
 
-                let link = `${config.urlPdf}${id}.pdf`;
-                mailer.emailProject(customer, project, link);
+            pdfDoc.encrypt({
+                userPassword: customer.nit,
+                ownerPassword: customer.nit,
+                userProtectionFlag: 4
+            }).endPDF();
 
-                resolve(true);
+            let link = `${config.urlPdf}${id}.pdf`;
+            mailer.emailProject(customer, project, link);
 
-            })
-
-
+            resolve(true);
 
         } catch (error) {
             console.log(error);
