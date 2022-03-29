@@ -1281,6 +1281,8 @@ router.post('/sendReportProject', async (req, res) => {
       }]
     }).exec();
 
+
+    console.log(project);
     let newBoards = project.boards.map(board => {
 
       let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
