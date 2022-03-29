@@ -1367,27 +1367,22 @@ router.post('/sendReportProject', async (req, res) => {
     console.log(JSON.stringify(data, null, 6))
     console.log('*****************************************************************');
 
-    res.json({
-      status: 'success',
-      data: data,
-      message: 'Reporte enviado exitosamente'
-    });
 
-    // axios.post(config.pathServicePhp + 'project.php', data)
-    //   .then(async (response) => {
+    axios.post(config.pathServicePhp + 'project.php', data)
+      .then(async (response) => {
 
-    //     console.log(response.data)
-    //     // await fn.sendEmailProject(response.data.data.id);
+        console.log(response.data)
+        // await fn.sendEmailProject(response.data.data.id);
 
-    //     res.json({
-    //       status: 'success',
-    //       data: data,
-    //       message: 'Reporte enviado exitosamente'
-    //     });
-    //   })
-    //   .catch(function (error) {
-    //     console.log(error);
-    // });
+        res.json({
+          status: 'success',
+          data: data,
+          message: 'Reporte enviado exitosamente'
+        });
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
 
   } catch (error) {
     console.log(error);
