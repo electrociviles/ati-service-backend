@@ -68,7 +68,7 @@ const sendEmailProject = id => {
     return new Promise(async (resolve, reject) => {
         try {
 
-            fs.unlink(`./pdf/${id}.pdf`, (err) => {
+            fs.unlink(`./pdf/${id}.pdf`, async (err) => {
                 if (err) {
                     console.error(err)
                 }
