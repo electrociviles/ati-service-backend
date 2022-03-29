@@ -258,7 +258,7 @@ router.post('/updateObservationProject', async (req, res) => {
 
   console.log(req.body);
   schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-    $set: { observation: req.body.observation }
+    $set: { observation: req.body.observations }
   }, {
     multi: true
   }).exec();
