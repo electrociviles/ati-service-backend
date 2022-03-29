@@ -72,7 +72,7 @@ const sendEmailProject = id => {
             let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(project.customer));
 
             const HummusRecipe = require('hummus-recipe');
-            const pdfDoc = new HummusRecipe(`./uploads/${id}.pdf`, `./uploads/${id}.pdf`);
+            const pdfDoc = new HummusRecipe(`./pdf/${id}.pdf`, `./pdf/${id}.pdf`);
 
             pdfDoc.encrypt({
                 userPassword: customer.nit,

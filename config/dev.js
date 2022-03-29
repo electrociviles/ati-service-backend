@@ -8,6 +8,6 @@ module.exports = {
   },
   origins: ['http://localhost:4012'],
   urlPdf: 'http://localhost:3984/',
-  pathSavePdf: '/Users/nelsontorres/Developer/Electrociviles/ati-service-backend/uploads/',
+  pathSavePdf: '/Users/nelsontorres/Developer/Electrociviles/ati-service-backend/pdf/',
   pathServicePhp: 'http://localhost/ati-pdf-server/'
 }
