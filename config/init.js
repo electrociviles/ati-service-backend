@@ -18,6 +18,7 @@ exports.Start = function () {
 
     /** Voltaje Item trifasico */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f664c'),
         mode: 'tri',
         title: "Voltaje R-S",
         group: 'board',
@@ -36,6 +37,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f664d'),
         mode: 'tri',
         title: "Voltaje R-T",
         group: 'board',
@@ -55,6 +57,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f664e'),
         mode: 'tri',
         title: "Voltaje S-T",
         group: 'board',
@@ -73,6 +76,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f664f'),
         mode: 'tri',
         title: "Voltaje R-N",
         description: "",
@@ -91,6 +95,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6650'),
         mode: 'tri',
         title: "Voltaje S-N",
         description: "",
@@ -109,6 +114,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6651'),
         mode: 'tri',
         title: "Voltaje T-N",
         description: "",
@@ -127,6 +133,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6652'),
         mode: 'tri',
         title: "Voltaje N-t",
         description: "",
@@ -147,6 +154,7 @@ exports.Start = function () {
 
     /** Voltaje Item monofasico */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6653'),
         mode: 'mono',
         title: "Voltaje Fase 1 - Fase 2",
         description: "",
@@ -165,6 +173,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6654'),
         mode: 'mono',
         title: "Voltaje Fase 1 - N",
         description: "",
@@ -183,6 +192,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6655'),
         mode: 'mono',
         title: "Voltaje Fase 2 - N",
         description: "",
@@ -201,6 +211,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6656'),
         mode: 'mono',
         title: "Voltaje N - t",
         description: "",
@@ -220,6 +231,7 @@ exports.Start = function () {
 
     /** Corriente trifasico */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6657'),
         mode: 'tri',
         title: "R",
         description: "",
@@ -238,6 +250,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6658'),
         mode: 'tri',
         title: "S",
         description: "",
@@ -256,6 +269,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6659'),
         mode: 'tri',
         title: "T",
         description: "",
@@ -274,6 +288,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f665a'),
         mode: 'tri',
         title: "N",
         description: "",
@@ -292,6 +307,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f665b'),
         mode: 'tri',
         title: "t",
         description: "",
@@ -312,6 +328,7 @@ exports.Start = function () {
 
     /** Corriente monofisico */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f665c'),
         mode: 'mono',
         title: "Fase 1",
         description: "",
@@ -330,6 +347,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f665d'),
         mode: 'mono',
         title: "Fase 2",
         description: "",
@@ -348,6 +366,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f665e'),
         mode: 'mono',
         title: "N",
         description: "",
@@ -366,6 +385,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f665f'),
         mode: 'mono',
         title: "t",
         description: "",
@@ -386,6 +406,7 @@ exports.Start = function () {
 
     /** General antes */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6660'),
         mode: 'before',
         title: "Foto marcación tablero",
         description: "",
@@ -404,6 +425,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6661'),
         mode: 'before',
         title: "Galeria antes mantenimiento",
         description: "",
@@ -422,6 +444,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6662'),
         mode: 'before',
         title: "Termografía antes mantenimiento",
         description: "",
@@ -439,10 +462,11 @@ exports.Start = function () {
     };
     list.push(item);
 
-    /** General despues */
+    /** General después */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6663'),
         mode: 'general',
-        title: "Galeria despues mantenimiento",
+        title: "Galeria después mantenimiento",
         description: "",
         group: 'board',
         type: "gallery_after_maintenance",
@@ -459,8 +483,9 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6664'),
         mode: 'after',
-        title: "Termografía despues",
+        title: "Termografía después",
         description: "",
         group: 'board',
         type: "degress_termography",
@@ -477,6 +502,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6665'),
         mode: 'after',
         title: "Galeria marcación circuito",
         description: "",
@@ -495,8 +521,9 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a035'),
         mode: 'after',
-        title: "Galeria despues de manteniento",
+        title: "Galeria después de manteniento",
         description: "",
         group: 'board',
         type: "circuit_marking",
@@ -513,6 +540,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6666'),
         mode: 'after',
         title: "Foto protección principal",
         description: "",
@@ -531,6 +559,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6667'),
         mode: 'after',
         title: "Foto de Diagrama Unifilar",
         description: "",
@@ -550,6 +579,7 @@ exports.Start = function () {
 
     /** Items attention */
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6668'),
         mode: 'attention',
         title: "Fotos antes de la atención",
         description: "",
@@ -568,8 +598,9 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('621bbe991d33b069860f6669'),
         mode: 'attention',
-        title: "Fotos despues de la atención",
+        title: "Fotos después de la atención",
         description: "",
         group: 'attention',
         type: "after",
@@ -586,6 +617,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03a'),
         mode: 'around',
         title: "Fotos antes",
         description: "",
@@ -605,8 +637,9 @@ exports.Start = function () {
 
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03b'),
         mode: 'around',
-        title: "Fotos despues",
+        title: "Fotos después",
         description: "",
         group: 'around',
         type: "after",
@@ -624,6 +657,7 @@ exports.Start = function () {
 
     /** Outlet sampling  */
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03c'),
         mode: 'outletSampling',
         title: "Muestreo toma 1",
         description: "",
@@ -642,6 +676,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03d'),
         mode: 'outletSampling',
         title: "Muestreo toma 2",
         description: "",
@@ -660,6 +695,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03e'),
         mode: 'outletSampling',
         title: "Muestreo toma 3",
         description: "",
@@ -678,6 +714,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03f'),
         mode: 'outletSampling',
         title: "Muestreo toma 4",
         description: "",
@@ -696,6 +733,7 @@ exports.Start = function () {
     list.push(item);
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a040'),
         mode: 'outletSampling',
         title: "Muestreo toma 5",
         description: "",
@@ -715,6 +753,7 @@ exports.Start = function () {
 
 
     var item = {
+        _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a041'),
         mode: 'finding',
         title: "Hallazgos",
         description: "",

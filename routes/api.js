@@ -6,7 +6,7 @@ var upload = multer({ dest: './uploads/' })
 var fn = require("./../utils/fn");
 var schemas = require("./../db/schemas");
 const bcrypt = require("bcrypt");
-const authMiddleware = require("../middleware/auth");
+// const authMiddleware = require("../middleware/auth");
 var mongoose = require('mongoose');
 const notification = require('../utils/notification');
 const config = require('./../config')
@@ -37,7 +37,7 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-router.post('/listProjects', authMiddleware, async (req, res) => {
+router.post('/listProjects', async (req, res) => {
 
   var query = schemas.Project.find().populate({
     path: 'boards',
@@ -70,7 +70,7 @@ router.post('/listProjects', authMiddleware, async (req, res) => {
   res.json({ status: 'success', projects, count });
 });
 
-router.post('/listAttentions', authMiddleware, async (req, res) => {
+router.post('/listAttentions', async (req, res) => {
 
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
@@ -114,7 +114,7 @@ router.post('/listCustomers', async (req, res) => {
   res.json({ status: 'success', customers, count });
 });
 
-router.post('/listBoards', authMiddleware, async (req, res) => {
+router.post('/listBoards', async (req, res) => {
 
   console.log(req.body)
   var query = schemas.Board.find().sort({ '_id': 1 }).select();
@@ -125,6 +125,74 @@ router.post('/listBoards', authMiddleware, async (req, res) => {
   res.json({ status: 'success', boards });
 });
 
+router.post('/updatedBoard', async (req, res) => {
+  items = await schemas.Item.find({ mode: { $in: ['finding'] }, })
+
+  await fn.asyncForEach(items, async (item) => {
+    let itemBoard = schemas.ItemBoard({
+      board: mongoose.Types.ObjectId(req.body.board),
+      item: mongoose.Types.ObjectId(item._id),
+      status: 'activo',
+      photos: [],
+      value: 0.0,
+    });
+    await itemBoard.save();
+
+    schemas.Board.updateOne({ _id: mongoose.Types.ObjectId(req.body.board) }, {
+      $push: { itemsBoards: itemBoard }
+    }, {
+      multi: true
+    }).exec();
+  });
+
+
+
+
+  res.json({ status: 'success' });
+
+})
+router.post('/updatedProject', async (req, res) => {
+  items = await schemas.Item.find({ mode: { $in: ['around'] } });
+  console.log(items);
+
+  let aroundItems = [];
+  let outletSampling = [];
+  await fn.asyncForEach(items, async item => {
+    let itemImage = schemas.ItemImage({
+      project: mongoose.Types.ObjectId(req.body.project),
+      item: mongoose.Types.ObjectId(item._id),
+      status: 'activo',
+      photos: [],
+      value: 0.0,
+    });
+    await itemImage.save();
+    aroundItems.push(itemImage);
+  });
+
+
+  items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
+  await fn.asyncForEach(items, async item => {
+    let itemImage = schemas.ItemImage({
+      project: mongoose.Types.ObjectId(req.body.project),
+      item: mongoose.Types.ObjectId(item._id),
+      status: 'activo',
+      photos: [],
+      value: 0.0,
+    });
+    await itemImage.save();
+    outletSampling.push(itemImage);
+  });
+
+  schemas.Project.updateOne({ _id: mongoose.Types.ObjectId(req.body.project) }, {
+    $set: { aroundItems: aroundItems, outletSampling: outletSampling }
+  }, {
+    multi: true
+  }).exec();
+
+
+
+  res.json({ status: 'success' });
+})
 router.post('/createBoard', async (req, res) => {
 
   let itemsBoards = [];
@@ -223,7 +291,6 @@ router.post('/updateTitleItem', async (req, res) => {
   res.json({ status: 'success', message: "Proyecto registrado exitosamente.", });
 
 })
-
 
 router.post('/createProject', async (req, res) => {
 
@@ -613,43 +680,43 @@ router.post('/closeAttention', async (req, res) => {
   }
 });
 
-router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
-  try {
-    await fn.asyncForEach(req.files, async (file) => {
-      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      console.log(fileName);
-      let src = await fs.createReadStream(file.path);
-      let dest = await fs.createWriteStream('./uploads/' + fileName);
-      src.pipe(dest);
-      src.on('end', async () => {
-        fs.unlinkSync(file.path);
+// router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
+//   try {
+//     await fn.asyncForEach(req.files, async (file) => {
+//       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+//       console.log(fileName);
+//       let src = await fs.createReadStream(file.path);
+//       let dest = await fs.createWriteStream('./uploads/' + fileName);
+//       src.pipe(dest);
+//       src.on('end', async () => {
+//         fs.unlinkSync(file.path);
 
-        const Jimp = require('jimp');
-        const image = await Jimp.read('./uploads/' + fileName);
-        await image.resize(400, Jimp.AUTO);
-        await image.quality(50);
-        await image.writeAsync('./uploads/' + fileName);
+//         const Jimp = require('jimp');
+//         const image = await Jimp.read('./uploads/' + fileName);
+//         await image.resize(400, Jimp.AUTO);
+//         await image.quality(50);
+//         await image.writeAsync('./uploads/' + fileName);
 
-        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-          $push: { photos: { url: fileName, type: 'remote' } }
-        }, {
-          upsert: true
-        }).exec();
+//         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+//           $push: { photos: { url: fileName, type: 'remote' } }
+//         }, {
+//           upsert: true
+//         }).exec();
 
-        res.json({ status: 'success' });
+//         res.json({ status: 'success' });
 
-      });
-      src.on('error', (err) => {
-        console.log(err);
-        res.json({ status: 'error' });
-      });
-    });
+//       });
+//       src.on('error', (err) => {
+//         console.log(err);
+//         res.json({ status: 'error' });
+//       });
+//     });
 
-  } catch (error) {
-    console.log(error);
-    res.json({ status: 'error' });
-  }
-});
+//   } catch (error) {
+//     console.log(error);
+//     res.json({ status: 'error' });
+//   }
+// });
 
 router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
   console.log(req.body)
@@ -676,7 +743,7 @@ router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) =>
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
 
       });
       src.on('error', (err) => {
@@ -716,7 +783,7 @@ router.post('/updateImageAround', upload.any("pictures"), async (req, res) => {
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
 
       });
       src.on('error', (err) => {
@@ -764,7 +831,7 @@ router.post('/updateImageOutletSampling', upload.any("pictures"), async (req, re
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
       });
     }
 
@@ -799,7 +866,7 @@ router.post('/updateImageAttention', upload.any("pictures"), async (req, res) =>
           upsert: true
         }).exec();
 
-        res.json({ status: 'success' });
+        res.json({ status: 'success', url: fileName });
 
       });
       src.on('error', (err) => {
@@ -1202,14 +1269,27 @@ router.post('/sendReportProject', async (req, res) => {
     }).populate({
       path: 'customer',
       select: { _id: 0, name: 1 }
+    }).populate({
+      path: 'aroundItems',
+      populate: [{
+        path: "item"
+      }]
+    }).populate({
+      path: 'outletSampling',
+      populate: [{
+        path: "item"
+      }]
     }).exec();
 
+
+    console.log(project);
     let newBoards = project.boards.map(board => {
 
       let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
       let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
       let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
       let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
+      let tmpCellsFinding = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'finding')
 
       let cellsBefore = tmpCellsBefore.map(cellBefore => {
         if (cellBefore.photos.length == 0) {
@@ -1248,18 +1328,29 @@ router.post('/sendReportProject', async (req, res) => {
         return cellAfter
       });
 
+      let cellsFinding = tmpCellsFinding.map(cellFinding => {
+        if (cellFinding.photos.length == 0) {
+          cellFinding.photos = [{
+            url: 'default.png',
+            type: 'remote'
+          }]
+        }
+        return cellFinding
+      });
+
       let newBoard = {
         cellsBefore,
         cellsVoltaje,
         cellsCorriente,
         cellsAfter,
+        cellsFinding,
         boardName: board.name,
         observation: board.observation,
-
       }
       return newBoard;
 
     })
+
     let data = {
       id: project._id,
       date: fn.getDateReport(),
@@ -1267,24 +1358,36 @@ router.post('/sendReportProject', async (req, res) => {
       type: project.type === 'tri' ? 'Trifásico' : 'Monofásico',
       customer: project.customer,
       boards: newBoards,
+      aroundItems: project.aroundItems,
+      outletSampling: project.outletSampling,
       pathServicePhp: config.pathSavePdf
     }
 
-    axios.post(config.pathServicePhp + 'project.php', data)
-      .then(async (response) => {
+    console.log('*****************************************************************');
+    console.log(JSON.stringify(data, null, 6))
+    console.log('*****************************************************************');
 
-        console.log(response.data)
-        await fn.sendEmailProject(response.data.data.id);
+    res.json({
+      status: 'success',
+      data: data,
+      message: 'Reporte enviado exitosamente'
+    });
 
-        res.json({
-          status: 'success',
-          data: data,
-          message: 'Reporte enviado exitosamente'
-        });
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
+    // axios.post(config.pathServicePhp + 'project.php', data)
+    //   .then(async (response) => {
+
+    //     console.log(response.data)
+    //     // await fn.sendEmailProject(response.data.data.id);
+
+    //     res.json({
+    //       status: 'success',
+    //       data: data,
+    //       message: 'Reporte enviado exitosamente'
+    //     });
+    //   })
+    //   .catch(function (error) {
+    //     console.log(error);
+    // });
 
   } catch (error) {
     console.log(error);
@@ -1449,38 +1552,43 @@ router.post('/removeImageFromAttentionItem', async (req, res) => {
 router.post('/removeImage', async (req, res) => {
   console.log(req.body);
 
-
+  let photos;
+  let itemImage;
   try {
 
     switch (req.body.group) {
       case 'board':
+        let itemBoard = await schemas.ItemBoard.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+        photos = itemBoard.photos.filter(item => item.url != req.body.url)
+        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: { photos }
+        }, { upsert: true }).exec();
+        break;
 
+      case 'around':
+        itemImage = await schemas.ItemImage.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+        photos = itemImage.photos.filter(item => item.url != req.body.url)
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: { photos }
+        }, { upsert: true }).exec();
+        break;
+
+      case 'outletSampling':
+        itemImage = await schemas.ItemImage.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
+        photos = itemImage.photos.filter(item => item.url != req.body.url)
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+          $set: { photos }
+        }, { upsert: true }).exec();
         break;
 
       default:
         break;
     }
-    let attention = await schemas.Attention.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
-    if (req.body.type == 'before') {
-      let photos = attention.photos_before.filter(item => item != req.body.url)
 
-      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-        $set: {
-          photos_before: photos,
-        }
-      }, {
-        upsert: true
-      }).exec();
-    } else {
-      let photos = attention.photos_after.filter(item => item != req.body.url)
-      schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
-        $set: {
-          photos_after: photos,
-        }
-      }, {
-        upsert: true
-      }).exec();
-    }
+    if (req.body.url != 'default.png')
+      fs.unlinkSync('./uploads/' + req.body.url)
+
+
 
     res.json({ status: 'success', message: 'Imagen eliminada exitosamente' });
 
