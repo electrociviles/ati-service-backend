@@ -1366,7 +1366,10 @@ router.post('/sendReportProject', async (req, res) => {
     console.log(JSON.stringify(data, null, 6))
     console.log('*****************************************************************');
 
-    fs.unlinkSync(`./pdf/${project._id}.pdf`);
+    if (fs.existsSync(`./pdf/${project._id}.pdf`)) {
+      fs.unlinkSync(`./pdf/${project._id}.pdf`);
+    }
+
 
 
 
@@ -1587,8 +1590,12 @@ router.post('/removeImage', async (req, res) => {
         break;
     }
 
-    if (req.body.url != 'default.png')
-      fs.unlinkSync('./uploads/' + req.body.url)
+
+    if (fs.existsSync('./uploads/' + req.body.url)) {
+      if (req.body.url != 'default.png')
+        fs.unlinkSync('./uploads/' + req.body.url)
+    }
+
 
 
 
