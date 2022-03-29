@@ -1361,6 +1361,10 @@ router.post('/sendReportProject', async (req, res) => {
       pathServicePhp: config.pathSavePdf
     }
 
+    console.log('*****************************************************************');
+    console.log(JSON.stringify(data, null, 6))
+    console.log('*****************************************************************');
+
     axios.post(config.pathServicePhp + 'project.php', data)
       .then(async (response) => {
 
