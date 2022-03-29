@@ -10,6 +10,6 @@ module.exports = {
   },
   urlPdf: 'https://atiservicios.com/ati/',
   origins: ['https://www.atiservicios.com', 'www.atiservicios.com', 'atiservicios.com', 'http://atiservicios.com'],
-  pathSavePdf: '/var/www/ati/ati-service-backend/uploads/',
+  pathSavePdf: '/var/www/ati/ati-service-backend/pdf/',
   pathServicePhp: 'http://localhost:8080/ati-pdf-server/'
 }
