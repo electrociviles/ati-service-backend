@@ -68,6 +68,8 @@ const sendEmailProject = id => {
     return new Promise(async (resolve, reject) => {
         try {
 
+            fs.unlinkSync(`./pdf/${id}.pdf`);
+
             let project = await schemas.Project.findById(mongoose.Types.ObjectId(id));
             let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(project.customer));
 
