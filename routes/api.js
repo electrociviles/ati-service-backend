@@ -1555,12 +1555,15 @@ router.post('/removeImage', async (req, res) => {
 
     switch (req.body.group) {
       case 'board':
+      case 'finding':
         let itemBoard = await schemas.ItemBoard.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
         photos = itemBoard.photos.filter(item => item.url != req.body.url)
         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
           $set: { photos }
         }, { upsert: true }).exec();
         break;
+
+      case 'board':
 
       case 'around':
         itemImage = await schemas.ItemImage.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
@@ -1577,6 +1580,8 @@ router.post('/removeImage', async (req, res) => {
           $set: { photos }
         }, { upsert: true }).exec();
         break;
+
+
 
       default:
         break;
