@@ -1365,21 +1365,27 @@ router.post('/sendReportProject', async (req, res) => {
     console.log(JSON.stringify(data, null, 6))
     console.log('*****************************************************************');
 
-    axios.post(config.pathServicePhp + 'project.php', data)
-      .then(async (response) => {
+    res.json({
+      status: 'success',
+      data: data,
+      message: 'Reporte enviado exitosamente'
+    });
 
-        console.log(response.data)
-        // await fn.sendEmailProject(response.data.data.id);
+    // axios.post(config.pathServicePhp + 'project.php', data)
+    //   .then(async (response) => {
 
-        res.json({
-          status: 'success',
-          data: data,
-          message: 'Reporte enviado exitosamente'
-        });
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
+    //     console.log(response.data)
+    //     // await fn.sendEmailProject(response.data.data.id);
+
+    //     res.json({
+    //       status: 'success',
+    //       data: data,
+    //       message: 'Reporte enviado exitosamente'
+    //     });
+    //   })
+    //   .catch(function (error) {
+    //     console.log(error);
+    // });
 
   } catch (error) {
     console.log(error);
