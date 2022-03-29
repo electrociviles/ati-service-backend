@@ -1269,6 +1269,16 @@ router.post('/sendReportProject', async (req, res) => {
     }).populate({
       path: 'customer',
       select: { _id: 0, name: 1 }
+    }).populate({
+      path: 'aroundItems',
+      populate: [{
+        path: "item"
+      }]
+    }).populate({
+      path: 'outletSampling',
+      populate: [{
+        path: "item"
+      }]
     }).exec();
 
     let newBoards = project.boards.map(board => {
@@ -1277,7 +1287,7 @@ router.post('/sendReportProject', async (req, res) => {
       let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
       let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
       let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
-      let tmpCellsAround = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'aroud')
+      let tmpCellsFinding = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'finding')
 
       let cellsBefore = tmpCellsBefore.map(cellBefore => {
         if (cellBefore.photos.length == 0) {
@@ -1316,14 +1326,14 @@ router.post('/sendReportProject', async (req, res) => {
         return cellAfter
       });
 
-      let cellsAround = tmpCellsAround.map(cellAround => {
-        if (cellAround.photos.length == 0) {
-          cellAround.photos = [{
+      let cellsFinding = tmpCellsFinding.map(cellFinding => {
+        if (cellFinding.photos.length == 0) {
+          cellFinding.photos = [{
             url: 'default.png',
             type: 'remote'
           }]
         }
-        return cellAround
+        return cellFinding
       });
 
       let newBoard = {
@@ -1331,14 +1341,14 @@ router.post('/sendReportProject', async (req, res) => {
         cellsVoltaje,
         cellsCorriente,
         cellsAfter,
-        cellsAround,
+        cellsFinding,
         boardName: board.name,
         observation: board.observation,
-
       }
       return newBoard;
 
     })
+
     let data = {
       id: project._id,
       date: fn.getDateReport(),
@@ -1346,6 +1356,8 @@ router.post('/sendReportProject', async (req, res) => {
       type: project.type === 'tri' ? 'Trifásico' : 'Monofásico',
       customer: project.customer,
       boards: newBoards,
+      aroundItems: project.aroundItems,
+      outletSampling: project.outletSampling,
       pathServicePhp: config.pathSavePdf
     }
 
@@ -1353,7 +1365,7 @@ router.post('/sendReportProject', async (req, res) => {
       .then(async (response) => {
 
         console.log(response.data)
-        await fn.sendEmailProject(response.data.data.id);
+        // await fn.sendEmailProject(response.data.data.id);
 
         res.json({
           status: 'success',

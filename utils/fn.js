@@ -64,7 +64,6 @@ const fileExtension = fileName => {
 
 const sendEmailProject = id => {
 
-    console.log('id', id)
 
     return new Promise(async (resolve, reject) => {
         try {
