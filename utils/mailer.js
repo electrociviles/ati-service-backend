@@ -5,8 +5,8 @@ exports.emailProject = (customer, project, link) => {
         let transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: "nelsonperlaza@gmail.com",
-                pass: "NelsonPerlaza.12"
+                user: "informeselectrociviles@gmail.com",
+                pass: "Electrociviles2022"
             }
         });
 
@@ -42,8 +42,8 @@ exports.emailAttention = (attention, attachments) => {
         let transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: "nelsonperlaza@gmail.com",
-                pass: "NelsonPerlaza.12"
+                user: "informeselectrociviles@gmail.com",
+                pass: "Electrociviles2022"
             }
         });
 
