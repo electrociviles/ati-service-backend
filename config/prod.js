@@ -4,7 +4,7 @@ module.exports = {
     expiration: '48h'
   },
   db: {
-    url: "mongodb://localhost:20612/ati",
+    url: "mongodb://localhost:20612/ati?authSource=admin",
     user: 'nTorres#*Enrrique@Cleo:?mama',
     pass: 'nTJacob*$%@Cleo*..bnSystem'
   },

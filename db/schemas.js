@@ -7,6 +7,7 @@ mongoose.Promise = global.Promise
 console.log(config);
 if (process.env.NODE_ENV == 'production') {
     mongoose.connect(config.db.url, {
+
         'auth': { 'authSource': 'admin' },
         'user': config.db.user,
         'pass': config.db.pass,
