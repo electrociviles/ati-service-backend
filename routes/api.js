@@ -807,6 +807,60 @@ router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) =>
   }
 });
 
+router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
+
+  try {
+
+    let fileNameSign = '';
+
+    console.log('req.body', req.body);
+    console.log('req.files', req.files);
+
+    if (req.files) {
+      await fn.asyncForEach(req.files, async (file) => {
+        let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+        let src = await fs.createReadStream(file.path);
+        let dest = await fs.createWriteStream('./uploads/' + fileName);
+        src.pipe(dest);
+        src.on('end', async () => {
+          console.log('end');
+          fs.unlinkSync(file.path);
+
+          const Jimp = require('jimp');
+          const image = await Jimp.read('./uploads/' + fileName);
+          await image.resize(400, Jimp.AUTO);
+          await image.quality(50);
+          await image.writeAsync('./uploads/' + fileName);
+        });
+        src.on('error', (err) => {
+          console.log(err)
+        });
+        fileNameSign = fileName;
+      });
+    }
+
+    schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        description: req.body.observations,
+        title: req.body.title,
+        customer: mongoose.Types.ObjectId(req.body.customer),
+        signature: fileNameSign,
+        names: req.body.name,
+        document: req.body.document,
+      }
+    }, {
+      upsert: true
+    }).exec();
+
+    res.json({ status: 'success' });
+
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error' });
+  }
+});
+
+
 router.post('/updateImageAround', upload.any("pictures"), async (req, res) => {
   console.log(req.body)
   console.log(req.files)
