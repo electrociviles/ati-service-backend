@@ -8,16 +8,11 @@ var schemas = require("./../db/schemas");
 const bcrypt = require("bcrypt");
 // const authMiddleware = require("../middleware/auth");
 var mongoose = require('mongoose');
-const notification = require('../utils/notification');
 const config = require('./../config')
 const axios = require('axios').default;
 
 
-
 router.post('/', (req, res, next) => {
-  console.log(req.body);
-  console.log(req);
-
   res.json({ status: 'respond with a resource' });
 });
 
@@ -35,6 +30,56 @@ router.post('/login', async (req, res, next) => {
   } else {
     res.json({ status: 'error', message: 'Usuario no encontrado' });
   }
+});
+
+router.post('/getMenuByRole', async (req, res) => {
+
+  console.log(req.body);
+  var list = []
+  let menus = await schemas.Menu.find().populate({
+    path: 'pages',
+    populate: [{
+      path: "roles",
+    }],
+    populate: [{
+      path: "children",
+    }]
+  })
+
+  let role = req.body.role;
+  console.log(role);
+
+  for (let i = 0; i < menus[0].pages.length; i++) {
+    if (menus[0].pages[i].roles.includes(role)) {
+      let children = fn.getChildrens(role, menus[0].pages[i])
+      var obj =
+      {
+        title: menus[0].pages[i].title,
+        href: menus[0].pages[i].href,
+        icon: menus[0].pages[i].icon,
+        children: children
+      }
+      console.log(obj);
+      list.push(obj)
+    }
+  }
+  res.json({ status: 'success', menus });
+});
+
+router.post('/getMenu', async (req, res) => {
+
+  var list = []
+  let menus = await schemas.Menu.find().populate({
+    path: 'pages',
+    populate: [{
+      path: "roles",
+    }],
+    populate: [{
+      path: "children",
+    }]
+  })
+
+  res.json({ status: 'success', menus });
 });
 
 router.post('/listProjects', async (req, res) => {
@@ -145,12 +190,25 @@ router.post('/updatedBoard', async (req, res) => {
     }).exec();
   });
 
+  res.json({ status: 'success' });
 
+})
 
+router.post('/updateMenuRole', async (req, res) => {
+
+  let { status, idpage, idrole } = req.body;
+
+  if (status) {
+    await schemas.Page.findByIdAndUpdate(idpage, { $push: { "roles": idrole } }, { safe: true, upsert: true }).exec()
+  }
+  else {
+    await schemas.Page.findByIdAndUpdate(idpage, { $pull: { "roles": idrole } }, { safe: true, upsert: true }).exec()
+  }
 
   res.json({ status: 'success' });
 
 })
+
 router.post('/updatedProject', async (req, res) => {
   items = await schemas.Item.find({ mode: { $in: ['around'] } });
   console.log(items);
@@ -193,6 +251,7 @@ router.post('/updatedProject', async (req, res) => {
 
   res.json({ status: 'success' });
 })
+
 router.post('/createBoard', async (req, res) => {
 
   let itemsBoards = [];
@@ -362,16 +421,6 @@ router.post('/removeMeasurement', async (req, res) => {
 });
 
 router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
-  console.log(req.body);
-
-  console.log("---------------- board ----------------");
-  console.log(req.body.board);
-  console.log("---------------- board ----------------");
-
-  console.log(req.files);
-  console.log("---------------- file ----------------");
-
-
   try {
     await fn.asyncForEach(req.files, async (file, index) => {
       let src = fs.createReadStream(file.path);
@@ -981,7 +1030,7 @@ router.post('/updateToken', async (req, res) => {
 router.post('/listUsers', async (req, res) => {
 
   console.log(req.body)
-  var query = schemas.User.find().sort({ '_id': 1 }).select();
+  var query = schemas.User.find().sort({ '_id': 1 }).populate('role');
   // if (req.body.project) {
   //   query.where('project').equals(mongoose.Types.ObjectId(req.body.project));
   // }
@@ -990,7 +1039,6 @@ router.post('/listUsers', async (req, res) => {
 
   res.json({ status: 'success', users, count });
 });
-
 
 router.post('/updateUser', upload.any("photo"), async (req, res) => {
   try {
@@ -1628,6 +1676,107 @@ router.post('/removeImageFromBoardItem', async (req, res) => {
   } catch (error) {
     console.log(error)
     res.json({ status: 'error', message: 'Ocurrió un error al actualizar' });
+  }
+});
+
+router.post('/getRoles', async (req, res) => {
+
+  let { filters, start, end } = req.body;
+
+  let query = schemas.Role.find()
+    .select()
+  if (start && end) {
+    query.skip(start)
+      .limit(end)
+  }
+  if (filters) {
+    if (filters.name)
+      query.where('name').equals(new RegExp(filters.name, "i"))
+    if (filters.status)
+      query.where('status').equals(filters.status)
+    if (filters.role)
+      query.where('_id').equals(filters.role)
+  }
+
+  let count = await schemas.Role.countDocuments();
+
+  return new Promise((resolve, reject) => {
+    query.exec(function (err, roles) {
+      res.json({ status: 'success', roles, count })
+    })
+  })
+});
+
+router.post('/createRole', async (req, res) => {
+
+  console.log(req.body);
+  try {
+    let role = new schemas.Role({
+      name: req.body.name,
+      administrative: false,
+      status: 'active',
+    });
+    await role.save();
+
+    res.json({ status: 'success', role, message: "Tablero registrado exitosamente" });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+  }
+});
+
+router.post('/deleteRole', async (req, res) => {
+  try {
+
+    schemas.Role.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'inactive',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Role desabilitado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el rol' });
+  }
+});
+
+router.post('/restoreRole', async (req, res) => {
+  try {
+
+    schemas.Role.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'active',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Role desabilitado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el rol' });
+  }
+});
+
+router.post('/updateRole', async (req, res) => {
+  try {
+    console.log(req.body);
+    schemas.Role.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        name: req.body.name,
+      }
+    }, {
+      multi: true
+    }).exec();
+    let role = await schemas.Role.findById(mongoose.Types.ObjectId(req.body.id))
+    res.json({ status: 'success', role, message: 'Role actualizado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el rol' });
   }
 });
 

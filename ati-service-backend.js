@@ -58,6 +58,8 @@ app.listen(config.port, function () {
   // init.createUser();
   // init.createCustomer();
   // init.createProject();
+  // init.createRole();
+  // init.createMenu();
 });
 
 module.exports = app;

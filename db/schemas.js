@@ -40,7 +40,7 @@ var UserSchema = new mongoose.Schema({
     photo: String,
     username: String,
     password: String,
-    role: String,
+    role: { type: mongoose.Schema.Types.ObjectId, ref: 'role' },
     token: String,
     status: String,
 });
@@ -52,7 +52,6 @@ UserSchema.pre('save', async function (next) {
     }
 
     try {
-
         const salt = await bcrypt.genSalt(10);
         user.password = await bcrypt.hash(user.password, salt);
         return next();
@@ -138,6 +137,31 @@ var AttentionSchema = new mongoose.Schema({
 });
 var Attention = mongoose.model('Attention', AttentionSchema);
 
+const MenuSchema = new mongoose.Schema({
+    title: String,
+    pages: [{ type: mongoose.Schema.Types.ObjectId, ref: 'page', autopopulate: true }],
+});
+const Menu = mongoose.model('menu', MenuSchema);
+MenuSchema.plugin(require('mongoose-autopopulate'));
+
+const PageSchema = new mongoose.Schema({
+    title: String,
+    href: String,
+    icon: String,
+    roles: [],
+    isParent: Boolean,
+    children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'page', autopopulate: true }]
+});
+const Page = mongoose.model('page', PageSchema);
+PageSchema.plugin(require('mongoose-autopopulate'));
+
+const RoleSchema = new mongoose.Schema({
+    name: String,
+    status: String,
+    administrative: Boolean
+})
+const Role = mongoose.model('role', RoleSchema)
+
 
 var schemas =
 {
@@ -149,5 +173,8 @@ var schemas =
     User,
     Attention,
     ItemImage,
+    Menu,
+    Page,
+    Role,
 };
 module.exports = schemas;

@@ -816,3 +816,191 @@ exports.createProject = function () {
     });
     project.save();
 };
+exports.createRole = function () {
+    var list = new Array()
+    var role = new schemas.Role({
+        _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3847'),
+        name: "Administrador",
+        administrative: true,
+        status: 'active'
+    })
+    list.push(role)
+
+    var role = new schemas.Role({
+        _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3848'),
+        name: "Cliente",
+        administrative: false,
+        status: 'active'
+    })
+    list.push(role)
+
+
+    var role = new schemas.Role({
+        _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3849'),
+        name: "Proveedor",
+        administrative: false,
+        status: 'active'
+    })
+    list.push(role)
+    schemas.Role.insertMany(list, function () { });
+
+}
+
+exports.createMenu = () => {
+
+    var menu = new schemas.Menu({
+        title: '',
+        pages: []
+    })
+
+    var listPage = new Array()
+
+    /** Inicio */
+    var home = new schemas.Page({
+        title: 'Inicio',
+        href: '/home',
+        icon: 'GoHome',
+        isParent: true,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(home)
+    menu.pages.push(home)
+
+    /** Servicies */
+    var attention = new schemas.Page({
+        title: 'Atenciones',
+        href: '/attentions',
+        icon: 'RiCustomerService2Fill',
+        isParent: false,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(attention)
+    menu.pages.push(attention)
+
+    /** Servicies */
+    var projects = new schemas.Page({
+        title: 'Projects',
+        href: '/projects',
+        icon: 'VscProject',
+        isParent: false,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(projects)
+    menu.pages.push(projects)
+
+
+    /** Servicies */
+    var customers = new schemas.Page({
+        title: 'Clientes',
+        href: '/customers',
+        icon: 'ImUsers',
+        isParent: true,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(customers)
+    menu.pages.push(customers)
+
+    var maintenance = new schemas.Page({
+        title: 'Mantenimientos',
+        href: '/maintenance',
+        icon: 'GiAutoRepair',
+        isParent: true,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(maintenance)
+
+
+    var attentionCenter = new schemas.Page({
+        title: 'Centros de atención',
+        href: '/attention-center',
+        icon: 'FaLaptopHouse',
+        isParent: true,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(attentionCenter)
+    menu.pages.push(attentionCenter)
+
+
+
+
+    /** Reports */
+    var reports = new schemas.Page({
+        title: 'Reportes',
+        href: '/reports',
+        icon: 'GoGraph',
+        isParent: true,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(reports)
+
+    var reports01 = new schemas.Page({
+        title: 'Mantenimiento 1',
+        href: '/reports/report1',
+        icon: 'RiFileList3Line',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(reports01)
+    menu.pages.push(reports)
+
+    reports.children.push(reports01._id)
+
+    /** Ajustes */
+    var pageAjustes = new schemas.Page({
+        title: 'Configuración',
+        href: '/setting',
+        icon: 'AiOutlineSetting',
+        isParent: true,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(pageAjustes)
+    menu.pages.push(pageAjustes)
+
+    var usuarios = new schemas.Page({
+        title: 'Usuarios',
+        href: '/users',
+        icon: 'FaUsers',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(usuarios)
+
+    //Roles
+    var roles = new schemas.Page({
+        title: 'Roles',
+        href: '/roles',
+        icon: 'FaUserShield',
+        isParent: false,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(roles)
+
+    var asignarRoles = new schemas.Page({
+        title: 'Asignar permisos',
+        href: '/roles/to-assign',
+        icon: 'FiKey',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(asignarRoles)
+    pageAjustes.children.push(usuarios._id)
+    pageAjustes.children.push(roles._id)
+    pageAjustes.children.push(asignarRoles._id)
+
+    menu.save()
+
+    schemas.Page.insertMany(listPage).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+
+}

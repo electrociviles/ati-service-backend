@@ -8,7 +8,7 @@ var config = require('./../config')
 var qpdf = require('node-qpdf');
 
 const createToken = (user, secret, expiresIn) => {
-    const { id, name, document_number, photo, username } = user
+    const { id, role, name, document_number, photo, username } = user
 
     return jwt.sign({
         id,
@@ -16,6 +16,7 @@ const createToken = (user, secret, expiresIn) => {
         document_number,
         photo,
         username,
+        role,
     }, secret, { expiresIn })
 }
 
@@ -178,7 +179,6 @@ const validateProject = project => {
     return errors > 0;
 }
 
-
 const getDateReport = () => {
     var date = new Date();
     var dateStr =
@@ -191,6 +191,37 @@ const getDateReport = () => {
     return dateStr
 }
 
+const getChildrens = (role, page) => {
+    let children = []
+    if (page.children.length > 0) {
+        for (let i = 0; i < page.children.length; i++) {
+            if (page.children[i].roles.includes(role)) {
+                let childrenLevelOne =
+                {
+                    title: page.children[i].title,
+                    href: page.children[i].href,
+                    icon: page.children[i].icon,
+                    children: []
+                }
+                if (page.children[i].children.length > 0) {
+                    for (let j = 0; j < page.children[i].children.length; j++) {
+                        if (page.children[i].children[j].roles.includes(role)) {
+                            let childrenLevelTwo =
+                            {
+                                title: page.children[i].children[j].title,
+                                href: page.children[i].children[j].href,
+                                icon: page.children[i].children[j].icon
+                            }
+                            childrenLevelOne.children.push(childrenLevelTwo)
+                        }
+                    }
+                }
+                children.push(childrenLevelOne)
+            }
+        }
+    }
+    return children
+}
 module.exports = {
     createToken,
     asyncForEach,
@@ -203,4 +234,5 @@ module.exports = {
     validateBoard,
     getDateReport,
     validateProject,
+    getChildrens,
 };
