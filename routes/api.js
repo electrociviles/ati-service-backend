@@ -1003,7 +1003,8 @@ router.post('/getInfoUser', async (req, res) => {
 
 router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
   try {
-
+    console.log("*********************************************");
+    console.log(req.body);
     let fileName = 'default.png';
     await fn.asyncForEach(req.files, async (file) => {
       let src = fs.createReadStream(file.path);
