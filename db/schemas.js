@@ -162,6 +162,13 @@ const RoleSchema = new mongoose.Schema({
 })
 const Role = mongoose.model('role', RoleSchema)
 
+const CenterOfAttentionSchema = new mongoose.Schema({
+    title: String,
+    description: String,
+    status: String
+})
+const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
+
 
 var schemas =
 {
@@ -176,5 +183,6 @@ var schemas =
     Menu,
     Page,
     Role,
+    CenterOfAttention,
 };
 module.exports = schemas;

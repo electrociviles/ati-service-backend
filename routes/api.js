@@ -34,7 +34,6 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/getMenuByRole', async (req, res) => {
 
-  console.log(req.body);
   var list = []
   let menus = await schemas.Menu.find().populate({
     path: 'pages',
@@ -47,7 +46,6 @@ router.post('/getMenuByRole', async (req, res) => {
   })
 
   let role = req.body.role;
-  console.log(role);
 
   for (let i = 0; i < menus[0].pages.length; i++) {
     if (menus[0].pages[i].roles.includes(role)) {
@@ -59,7 +57,6 @@ router.post('/getMenuByRole', async (req, res) => {
         icon: menus[0].pages[i].icon,
         children: children
       }
-      console.log(obj);
       list.push(obj)
     }
   }
@@ -146,8 +143,7 @@ router.post('/getAttention', async (req, res) => {
 });
 
 router.post('/listCustomers', async (req, res) => {
-  console.log("----------------------- Body ----------------------");
-  console.log(req.body);
+
   var query = schemas.Customer.find().select();
 
   if (req.body.search) {
@@ -1082,17 +1078,24 @@ router.post('/updateToken', async (req, res) => {
   }
 });
 
+/** Users */
 router.post('/listUsers', async (req, res) => {
 
-  console.log(req.body)
-  var query = schemas.User.find().sort({ '_id': 1 }).populate('role');
-  // if (req.body.project) {
-  //   query.where('project').equals(mongoose.Types.ObjectId(req.body.project));
-  // }
-  let users = await query.exec();
+  let { start, end } = req.body;
+
+  let query = schemas.User.find()
+    .sort({ '_id': 1 })
+    .populate('role')
+    .skip(start)
+    .limit(end)
+
   let count = await schemas.User.countDocuments();
 
-  res.json({ status: 'success', users, count });
+  return new Promise((resolve, reject) => {
+    query.exec(function (_, users) {
+      res.json({ status: 'success', users, count })
+    })
+  })
 });
 
 router.post('/updateUser', upload.any("photo"), async (req, res) => {
@@ -1244,6 +1247,107 @@ router.post('/restoreUser', async (req, res) => {
     res.json({ status: 'error', message: 'Ocurrió un error al activar el funcionario' });
   }
 });
+
+/** Center of Attentions */
+router.post('/listCenterOfAttention', async (req, res) => {
+
+  let { start, end } = req.body;
+
+  let query = schemas.CenterOfAttention.find()
+    .sort({ '_id': 1 })
+    .skip(start)
+    .limit(end)
+
+  let count = await schemas.CenterOfAttention.countDocuments();
+
+  return new Promise((resolve, reject) => {
+    query.exec(function (_, centersOfAttention) {
+      res.json({ status: 'success', centersOfAttention, count })
+    })
+  })
+});
+
+router.post('/updateCenterOfAttention', upload.any("photo"), async (req, res) => {
+  try {
+
+    await schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        title: req.body.title,
+        description: req.body.description,
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
+});
+
+router.post('/createCenterOfAttention', async (req, res) => {
+
+  console.log(req.body);
+  let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': req.body.title })
+  if (!centerOfAttention) {
+
+    try {
+      let centerOfAttention = schemas.CenterOfAttention({
+        title: req.body.title,
+        description: req.body.description,
+        status: 'active'
+      });
+      await centerOfAttention.save()
+
+      res.json({ status: 'success', centerOfAttention });
+
+    } catch (error) {
+      console.log(error);
+      res.json({ status: 'error' });
+    }
+  } else {
+    res.json({ status: 'error', message: "El centro de atención ya existe" });
+  }
+});
+
+router.post('/deleteCenterOfAttention', async (req, res) => {
+  try {
+
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'inactive',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Centro de atención desabilitado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el centro de atención' });
+  }
+});
+
+router.post('/restoreCenterOfAttention', async (req, res) => {
+  try {
+
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: 'active',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Centro de atención activado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al activar el centro de atención' });
+  }
+});
+
+
 
 router.post('/openItemBoard', async (req, res) => {
   console.log(req.body)
