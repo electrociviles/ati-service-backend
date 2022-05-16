@@ -222,6 +222,44 @@ const getChildrens = (role, page) => {
     }
     return children
 }
+
+const semiAnnualMaintenance = () => {
+
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            let configuration = await schemas.Configuration.findOne({ "key": "expirationDateMaintenance" });
+
+            console.log('configuration', configuration);
+            console.log('configuration.value ', parseInt(configuration.value));
+
+            let result = await schemas.CenterOfAttention.aggregate([{
+                $project: {
+                    _id: 0,
+                    dayssince: {
+                        $trunc: {
+                            $divide: [{ $subtract: ['$expirationDateMaintenance', new Date()] }, 1000 * 60 * 60 * 24]
+                        }
+                    }
+                }
+            },
+            ]).exec();
+
+            console.log('result', result[0].dayssince);
+
+            // mailer.emailProject(customer, project, link);
+
+            resolve(true);
+
+        } catch (error) {
+            console.log(error);
+            reject({
+                status: 'error',
+                message: 'Ocurrió un error al abrir la marcación'
+            });
+        }
+    });
+}
 module.exports = {
     createToken,
     asyncForEach,
@@ -235,4 +273,5 @@ module.exports = {
     getDateReport,
     validateProject,
     getChildrens,
+    semiAnnualMaintenance
 };

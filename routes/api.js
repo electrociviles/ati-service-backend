@@ -81,6 +81,8 @@ router.post('/getMenu', async (req, res) => {
 
 router.post('/listProjects', async (req, res) => {
 
+  let { start, end } = req.body;
+
   var query = schemas.Project.find().populate({
     path: 'boards',
     populate: [{
@@ -101,7 +103,11 @@ router.post('/listProjects', async (req, res) => {
     populate: [{
       path: "item"
     }]
-  });
+  })
+  if (req.body.paginate) {
+    query.skip(start)
+      .limit(end);
+  }
 
 
   if (req.body.search) {
@@ -113,6 +119,7 @@ router.post('/listProjects', async (req, res) => {
 });
 
 router.post('/listAttentions', async (req, res) => {
+  let { start, end } = req.body;
 
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
@@ -122,6 +129,11 @@ router.post('/listAttentions', async (req, res) => {
   }).populate({
     path: 'customer',
   });
+
+  if (req.body.paginate) {
+    query.skip(start)
+      .limit(end);
+  }
 
 
   if (req.body.search) {
@@ -144,11 +156,18 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/listCustomers', async (req, res) => {
 
+  let { start, end } = req.body;
+
   var query = schemas.Customer.find().select();
 
   if (req.body.search) {
     query.where('name').equals(new RegExp(req.body.search, "i"));
   }
+  if (req.body.paginate) {
+    query.skip(start)
+      .limit(end);
+  }
+
   let customers = await query.exec();
 
   let count = await schemas.Customer.countDocuments();
@@ -476,7 +495,6 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 
 router.post('/createAttention', upload.any("pictures"), async (req, res) => {
 
-  console.log(req.body);
   try {
     items = await schemas.Item.find({ mode: { $in: ['attention'] } });
 
@@ -1086,8 +1104,11 @@ router.post('/listUsers', async (req, res) => {
   let query = schemas.User.find()
     .sort({ '_id': 1 })
     .populate('role')
-    .skip(start)
-    .limit(end)
+
+  if (req.body.paginate) {
+    query.skip(start)
+      .limit(end)
+  }
 
   let count = await schemas.User.countDocuments();
 
@@ -1155,8 +1176,6 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
   if (!usr) {
 
     let fileName = 'default.png';
-    console.log(req.body);
-    console.log(req.files);
     try {
       if (req.files) {
         await fn.asyncForEach(req.files, async (file) => {
@@ -1251,10 +1270,14 @@ router.post('/restoreUser', async (req, res) => {
 /** Center of Attentions */
 router.post('/listCenterOfAttention', async (req, res) => {
 
+
   let { start, end } = req.body;
+
+  console.log(start, end);
 
   let query = schemas.CenterOfAttention.find()
     .sort({ '_id': 1 })
+    .populate({ path: 'customer' })
     .skip(start)
     .limit(end)
 
@@ -1272,14 +1295,25 @@ router.post('/updateCenterOfAttention', upload.any("photo"), async (req, res) =>
 
     await schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
-        title: req.body.title,
+        title: req.body.name,
         description: req.body.description,
       }
     }, {
       multi: true
     }).exec();
+    if (req.body.customer) {
+      await schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+        $set: {
+          customer: mongoose.Types.ObjectId(req.body.customer),
+        }
+      }, {
+        multi: true
+      }).exec();
+    }
 
-    res.json({ status: 'success' });
+    let centerOfAttention = await schemas.CenterOfAttention.findById(mongoose.Types.ObjectId(req.body.id))
+
+    res.json({ status: 'success', centerOfAttention });
   } catch (error) {
     console.log(error);
     res.json({ status: 'error' });
@@ -1288,17 +1322,30 @@ router.post('/updateCenterOfAttention', upload.any("photo"), async (req, res) =>
 
 router.post('/createCenterOfAttention', async (req, res) => {
 
-  console.log(req.body);
   let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': req.body.title })
   if (!centerOfAttention) {
 
     try {
       let centerOfAttention = schemas.CenterOfAttention({
-        title: req.body.title,
+        title: req.body.name,
         description: req.body.description,
-        status: 'active'
+        expirationDateMaintenance: req.body.expirationDateMaintenance,
+        customer: mongoose.Types.ObjectId(req.body.customer),
+        status: 'active',
       });
-      await centerOfAttention.save()
+      await centerOfAttention.save();
+
+      let user = schemas.User({
+        name: req.body.name,
+        username: req.body.username,
+        email: req.body.email,
+        document_number: '',
+        role: mongoose.Types.ObjectId('5a046fe9627e3526802b3848'),
+        photo: 'default.png',
+        password: req.body.password,
+        status: 'activo'
+      });
+      await user.save();
 
       res.json({ status: 'success', centerOfAttention });
 
@@ -1313,7 +1360,6 @@ router.post('/createCenterOfAttention', async (req, res) => {
 
 router.post('/deleteCenterOfAttention', async (req, res) => {
   try {
-
     schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         status: 'inactive',
@@ -1394,8 +1440,6 @@ router.post('/sendEmailAttention', async (req, res) => {
 
 router.post('/createCustomer', async (req, res) => {
 
-  console.log('asdkaldadldlfjaldfjlasdjlsjfldajflkasdjklalfkajlk')
-  console.log(req.body)
   let cus = await schemas.Customer.findOne({ 'nit': req.body.nit })
   if (!cus) {
 
@@ -1410,6 +1454,17 @@ router.post('/createCustomer', async (req, res) => {
         status: 'activo'
       });
       await customer.save()
+
+      let user = schemas.User({
+        name: req.body.name,
+        username: req.body.username,
+        document_number: '',
+        role: mongoose.Types.ObjectId('5a046fe9627e3526802b3848'),
+        photo: 'default.png',
+        password: req.body.password,
+        status: 'activo'
+      });
+      await user.save()
 
       res.json({ status: 'success' });
 

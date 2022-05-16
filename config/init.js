@@ -845,6 +845,16 @@ exports.createRole = function () {
     schemas.Role.insertMany(list, function () { });
 
 }
+exports.createConfiguration = function () {
+
+    var Configuration = schemas.Configuration;
+    var configuration = new Configuration({
+        title: 'Vencimiento mantenimiento semestral',
+        key: 'expirationDateMaintenance',
+        value: '6'
+    });
+    configuration.save();
+};
 
 exports.createMenu = () => {
 
