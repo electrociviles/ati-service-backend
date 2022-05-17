@@ -222,6 +222,72 @@ const getChildrens = (role, page) => {
     }
     return children
 }
+
+const semiAnnualMaintenance = () => {
+
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            let configurations = await schemas.Configuration.find();
+
+
+            let result = await schemas.CenterOfAttention.aggregate([{
+                $project: {
+                    _id: 0,
+                    dayssince: {
+                        $trunc: {
+                            $divide: [{ $subtract: ['$expirationDateMaintenance', new Date()] }, 1000 * 60 * 60 * 24]
+                        }
+                    }
+                }
+            },
+            ]).exec();
+
+
+            let remainingDaysMaintenance = result[0].dayssince;
+
+
+            // Contabilidad usuario de toda tienda
+            // 1 un mes antes de vencer el mantenimiento se le envia un correo al ofset de cadata tienda 
+            // informandole que debe aprovisonar 6.000.000 de pesos
+
+
+
+            asyncForEach(configurations, async (configuration) => {
+                console.log(configuration.key, configuration.value);
+                if (parseInt(configuration.value) == remainingDaysMaintenance) {
+
+
+                    switch (configuration.key) {
+                        case 'provisioningAlert':
+
+                            break;
+
+                        case 'expirationDateMaintenance':
+
+                            break;
+                    }
+                    // Enviar email al oset y jefe de mantenimiento 
+                    // avisandole que el mantenimiento se va a vencer
+                }
+            });
+
+            // Mantenimientos correctivos
+
+
+            // mailer.emailProject(customer, project, link);
+
+            resolve(true);
+
+        } catch (error) {
+            console.log(error);
+            reject({
+                status: 'error',
+                message: 'Ocurrió un error al abrir la marcación'
+            });
+        }
+    });
+}
 module.exports = {
     createToken,
     asyncForEach,
@@ -235,4 +301,5 @@ module.exports = {
     getDateReport,
     validateProject,
     getChildrens,
+    semiAnnualMaintenance
 };

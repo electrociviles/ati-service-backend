@@ -12,6 +12,7 @@ var apiRouter = require('./routes/api');
 var init = require('./config/init');
 const fn = require('./utils/fn');
 var config = require('./config')
+var cron = require('node-cron')
 
 var app = express();
 
@@ -60,6 +61,22 @@ app.listen(config.port, function () {
   // init.createProject();
   // init.createRole();
   // init.createMenu();
+  // init.createConfiguration();
 });
+
+
+let cronProcess = {
+  semiAnnualMaintenance: {
+    status: false,
+    // times: '*/5 * * * * *'
+    times: '*/15 * * * * *'
+  }
+}
+cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {
+  if (cronProcess.semiAnnualMaintenance.status) {
+    console.log(new Date());
+    fn.semiAnnualMaintenance()
+  }
+})
 
 module.exports = app;

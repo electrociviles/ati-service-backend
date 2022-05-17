@@ -38,6 +38,7 @@ var UserSchema = new mongoose.Schema({
     name: String,
     document_number: String,
     photo: String,
+    email: String,
     username: String,
     password: String,
     role: { type: mongoose.Schema.Types.ObjectId, ref: 'role' },
@@ -165,9 +166,18 @@ const Role = mongoose.model('role', RoleSchema)
 const CenterOfAttentionSchema = new mongoose.Schema({
     title: String,
     description: String,
-    status: String
+    status: String,
+    expirationDateMaintenance: Date,
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
 })
 const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
+
+const ConfigurationSchema = new mongoose.Schema({
+    title: String,
+    key: String,
+    value: String,
+})
+const Configuration = mongoose.model('configuration', ConfigurationSchema)
 
 
 var schemas =
@@ -184,5 +194,6 @@ var schemas =
     Page,
     Role,
     CenterOfAttention,
+    Configuration,
 };
 module.exports = schemas;
