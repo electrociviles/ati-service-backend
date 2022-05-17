@@ -436,6 +436,9 @@ router.post('/removeMeasurement', async (req, res) => {
 });
 
 router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
+
+  console.log(JSON.stringify(req.body, null, 6))
+
   try {
     await fn.asyncForEach(req.files, async (file, index) => {
       let src = fs.createReadStream(file.path);

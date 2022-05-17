@@ -228,10 +228,8 @@ const semiAnnualMaintenance = () => {
 
     return new Promise(async (resolve, reject) => {
         try {
-            let configuration = await schemas.Configuration.findOne({ "key": "expirationDateMaintenance" });
+            let configurations = await schemas.Configuration.find();
 
-            console.log('configuration', configuration);
-            console.log('configuration.value ', parseInt(configuration.value));
 
             let result = await schemas.CenterOfAttention.aggregate([{
                 $project: {
@@ -245,7 +243,37 @@ const semiAnnualMaintenance = () => {
             },
             ]).exec();
 
-            console.log('result', result[0].dayssince);
+
+            let remainingDaysMaintenance = result[0].dayssince;
+
+
+            // Contabilidad usuario de toda tienda
+            // 1 un mes antes de vencer el mantenimiento se le envia un correo al ofset de cadata tienda 
+            // informandole que debe aprovisonar 6.000.000 de pesos
+
+
+
+            asyncForEach(configurations, async (configuration) => {
+                console.log(configuration.key, configuration.value);
+                if (parseInt(configuration.value) == remainingDaysMaintenance) {
+
+
+                    switch (configuration.key) {
+                        case 'provisioningAlert':
+
+                            break;
+
+                        case 'expirationDateMaintenance':
+
+                            break;
+                    }
+                    // Enviar email al oset y jefe de mantenimiento 
+                    // avisandole que el mantenimiento se va a vencer
+                }
+            });
+
+            // Mantenimientos correctivos
+
 
             // mailer.emailProject(customer, project, link);
 

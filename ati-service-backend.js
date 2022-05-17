@@ -67,7 +67,7 @@ app.listen(config.port, function () {
 
 let cronProcess = {
   semiAnnualMaintenance: {
-    status: true,
+    status: false,
     // times: '*/5 * * * * *'
     times: '*/15 * * * * *'
   }
