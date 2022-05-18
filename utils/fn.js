@@ -135,6 +135,8 @@ const validateAttention = attention => {
     if (attention.signature.length == 0) {
         errors++;
     }
+    console.log('attention.attentionItems', attention.attentionItems);
+    console.log('attention.attentionItems', attention.attentionItems.length);
     if (attention.attentionItems.length != 2) {
         errors++;
     }
