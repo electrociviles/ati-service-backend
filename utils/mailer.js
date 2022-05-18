@@ -40,12 +40,32 @@ exports.emailAttention = (attention, attachments) => {
     nodemailer.createTestAccount((err, account) => {
 
         let transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: "informeselectrociviles@gmail.com",
-                pass: "Electrociviles2022"
+            // service: 'Godaddy',
+            host: "mail.privateemail.com",
+            secureConnection: true,
+            port: 465,
+            auth:
+            {
+                user: "info@ebanoextensiones.com",
+                pass: "nTorres.12"
             }
         });
+
+        // let transporter = nodemailer.createTransport({
+        //     host: "smtpout.secureserver.net",
+        //     secure: true,
+        //     secureConnection: false, // TLS requires secureConnection to be false
+        //     tls: {
+        //         ciphers: "SSLv3",
+        //     },
+        //     requireTLS: true,
+        //     port: 465,
+        //     debug: true,
+        //     auth: {
+        //         user: "ati@123-tecnicos.com",
+        //         pass: "Tecnico2021*"
+        //     },
+        // });
 
 
         let html = `<h1>Atención finalizada</h1>
@@ -53,12 +73,13 @@ exports.emailAttention = (attention, attachments) => {
         <p>La atención fue cerrada exitosamente para mas información ver el archivo adjunto</p>
         </div>`
         let mailOptions = {
-            from: `"Cierre de atención" <${attention.customer.email}>`,
+            from: `info@ebanoextensiones.com`,
             to: attention.customer.email,
             subject: '📎',
             attachments,
             html,
         }
+        console.log(attention.customer.email);
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
