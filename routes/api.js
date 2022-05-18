@@ -1725,31 +1725,31 @@ router.post('/finishAttention', async (req, res) => {
 
 
 
-      // let data = {
-      //   date: fn.getDateReport(),
-      //   attention: attention,
-      //   pathServicePhp: config.pathSavePdf
-      // }
+      let data = {
+        date: fn.getDateReport(),
+        attention: attention,
+        pathServicePhp: config.pathSavePdf
+      }
 
-      // axios.post(config.pathServicePhp + 'attention.php', data)
-      //   .then(async (response) => {
+      axios.post(config.pathServicePhp + 'attention.php', data)
+        .then(async (response) => {
 
-      //     console.log(response.data)
-      //     await fn.sendEmailAttention(attention._id);
+          console.log(response.data)
+          await fn.sendEmailAttention(attention._id);
 
-      //     res.json({
-      //       status: 'success',
-      //       message: 'Reporte enviado exitosamente'
-      //     });
-      //   })
-      //   .catch(function (error) {
-      //     console.log(error);
-      //   });
-      res.json({
-        attention,
-        status: 'success',
-        message: 'Reporte enviado exitosamente'
-      });
+          res.json({
+            status: 'success',
+            message: 'Reporte enviado exitosamente'
+          });
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
+      // res.json({
+      //   attention,
+      //   status: 'success',
+      //   message: 'Reporte enviado exitosamente'
+      // });
 
     } else {
       res.json({
