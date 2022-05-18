@@ -135,10 +135,7 @@ const validateAttention = attention => {
     if (attention.signature.length == 0) {
         errors++;
     }
-    if (attention.photos_before.length == 0) {
-        errors++;
-    }
-    if (attention.photos_after.length == 0) {
+    if (attention.attentionItems.length != 2) {
         errors++;
     }
 
