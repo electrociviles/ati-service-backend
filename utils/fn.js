@@ -106,18 +106,16 @@ const sendEmailAttention = id => {
                 path: 'customer'
             }).exec();
 
-            const HummusRecipe = require('hummus-recipe');
+            console.log('xxxx => ', attention);
 
             let path = `${config.pathSavePdf}${id}.pdf`;
             const pdfBase64 = fs.readFileSync(path, { encoding: 'base64' });
 
-            let attachments = [
-                {
-                    filename: 'Cierre atención ' + attention._id + '.pdf',
-                    content: pdfBase64,
-                    encoding: 'base64'
-                },
-            ];
+            let attachments = [{
+                filename: 'Cierre atención ' + attention._id + '.pdf',
+                content: pdfBase64,
+                encoding: 'base64'
+            }];
             mailer.emailAttention(attention, attachments);
 
             resolve(true);
