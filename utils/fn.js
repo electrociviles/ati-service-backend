@@ -120,9 +120,6 @@ const sendEmailAttention = id => {
 
             resolve(true);
 
-            resolve(true);
-
-
         } catch (error) {
             console.log(error);
             reject({

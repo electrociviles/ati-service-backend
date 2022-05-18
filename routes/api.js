@@ -1333,6 +1333,7 @@ router.post('/createCenterOfAttention', async (req, res) => {
         title: req.body.name,
         description: req.body.description,
         expirationDateMaintenance: req.body.expirationDateMaintenance,
+        expirationDateMaintenance: req.body.expirationDateMaintenance,
         customer: mongoose.Types.ObjectId(req.body.customer),
         status: 'active',
       });
@@ -1693,54 +1694,62 @@ router.post('/finishAttention', async (req, res) => {
       // });
 
 
-      let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id)).populate({
-        path: 'customer'
-      }).exec();
+      let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id))
+        .populate({
+          path: 'customer'
+        }).populate({
+          path: 'attentionItems'
+        }).exec();
 
-      let newPhotosBefore = attention.photos_before.map(element => {
-        if (element.length == 0) {
-          element = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return element;
+      // let newPhotosBefore = attention.attentionItems.map(element => {
+      //   if (element.length == 0) {
+      //     element = [{
+      //       url: 'default.png',
+      //       type: 'remote'
+      //     }]
+      //   }
+      //   return element;
+      // });
+      // attention.photos_before = newPhotosBefore;
+
+      // let newPhotosAfter = attention.photos_after.map(element => {
+      //   if (element.length == 0) {
+      //     element = [{
+      //       url: 'default.png',
+      //       type: 'remote'
+      //     }]
+      //   }
+      //   return element;
+      // });
+      // attention.photos_after = newPhotosAfter;
+
+
+
+      // let data = {
+      //   date: fn.getDateReport(),
+      //   attention: attention,
+      //   pathServicePhp: config.pathSavePdf
+      // }
+
+      // axios.post(config.pathServicePhp + 'attention.php', data)
+      //   .then(async (response) => {
+
+      //     console.log(response.data)
+      //     await fn.sendEmailAttention(attention._id);
+
+      //     res.json({
+      //       status: 'success',
+      //       message: 'Reporte enviado exitosamente'
+      //     });
+      //   })
+      //   .catch(function (error) {
+      //     console.log(error);
+      //   });
+      res.json({
+        attention,
+        status: 'success',
+        message: 'Reporte enviado exitosamente'
       });
-      attention.photos_before = newPhotosBefore;
-
-      let newPhotosAfter = attention.photos_after.map(element => {
-        if (element.length == 0) {
-          element = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return element;
-      });
-      attention.photos_after = newPhotosAfter;
-
-
-
-      let data = {
-        date: fn.getDateReport(),
-        attention: attention,
-        pathServicePhp: config.pathSavePdf
-      }
-
-      axios.post(config.pathServicePhp + 'attention.php', data)
-        .then(async (response) => {
-
-          console.log(response.data)
-          await fn.sendEmailAttention(attention._id);
-
-          res.json({
-            status: 'success',
-            message: 'Reporte enviado exitosamente'
-          });
-        })
-        .catch(function (error) {
-          console.log(error);
-        });
 
     } else {
       res.json({
