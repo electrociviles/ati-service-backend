@@ -225,49 +225,60 @@ const semiAnnualMaintenance = () => {
 
             let result = await schemas.CenterOfAttention.aggregate([{
                 $project: {
-                    _id: 0,
-                    dayssince: {
+                    statusProvisioningAlertDate: 1,
+                    remainingDays: {
                         $trunc: {
                             $divide: [{ $subtract: ['$expirationDateMaintenance', new Date()] }, 1000 * 60 * 60 * 24]
                         }
                     }
                 }
             },
-            ]).exec();
+            ]).exec()
+
+            console.log('result', result);
 
 
-            let remainingDaysMaintenance = result[0].dayssince;
+            if (result.length > 0) {
+                let remainingDays = result[0].remainingDays;
 
+                // Contabilidad usuario de toda tienda
+                // 1 un mes antes de vencer el mantenimiento se le envia un correo al ofset de cadata tienda 
+                // informandole que debe aprovisonar 6.000.000 de pesos
+                asyncForEach(configurations, async (configuration) => {
+                    console.log('__________________________________________________');
+                    console.log('configuration.value ', configuration.value);
+                    console.log('configuration.key ', configuration.key);
+                    console.log('remainingDays ', remainingDays);
+                    console.log('__________________________________________________');
+                    if (parseInt(configuration.value) == remainingDays) {
+                        switch (configuration.key) {
+                            case 'provisioningAlert':
+                                if (result[0].statusProvisioningAlertDate === 'pending') {
+                                    console.log('Enviar correo de aprovisionamiento... ');
+                                    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(result[0]._id) }, {
+                                        $set: {
+                                            statusProvisioningAlertDate: 'send',
+                                        }
+                                    }, {
+                                        multi: true
+                                    }).exec();
+                                }
+                                break;
 
-            // Contabilidad usuario de toda tienda
-            // 1 un mes antes de vencer el mantenimiento se le envia un correo al ofset de cadata tienda 
-            // informandole que debe aprovisonar 6.000.000 de pesos
+                            case 'expirationDateMaintenance':
 
-
-
-            asyncForEach(configurations, async (configuration) => {
-                console.log(configuration.key, configuration.value);
-                if (parseInt(configuration.value) == remainingDaysMaintenance) {
-
-
-                    switch (configuration.key) {
-                        case 'provisioningAlert':
-
-                            break;
-
-                        case 'expirationDateMaintenance':
-
-                            break;
+                                break;
+                        }
+                        // Enviar email al oset y jefe de mantenimiento 
+                        // avisandole que el mantenimiento se va a vencer
                     }
-                    // Enviar email al oset y jefe de mantenimiento 
-                    // avisandole que el mantenimiento se va a vencer
-                }
-            });
+                });
 
-            // Mantenimientos correctivos
+                // Mantenimientos correctivos
 
 
-            // mailer.emailProject(customer, project, link);
+                // mailer.emailProject(customer, project, link);
+            }
 
             resolve(true);
 

@@ -778,8 +778,6 @@ exports.Start = function () {
         console.log(error)
     });
 }
-
-
 /**  Creacion de usuario principal **/
 exports.createUser = function () {
 
@@ -847,13 +845,24 @@ exports.createRole = function () {
 }
 exports.createConfiguration = function () {
 
+    var list = new Array()
+
     var Configuration = schemas.Configuration;
     var configuration = new Configuration({
         title: 'Vencimiento mantenimiento semestral',
         key: 'expirationDateMaintenance',
-        value: '6'
+        value: '30'
     });
-    configuration.save();
+    list.push(configuration)
+
+    var configuration = new Configuration({
+        title: 'Alerta de aprovisionamiento',
+        key: 'provisioningAlert',
+        value: '15'
+    });
+    list.push(configuration)
+
+    schemas.Configuration.insertMany(list, function () { });
 };
 
 exports.createMenu = () => {
