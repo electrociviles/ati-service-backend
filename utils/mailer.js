@@ -51,14 +51,22 @@ exports.emailAttention = (attention, attachments) => {
         //     }
         // });
 
+        // let transporter = nodemailer.createTransport({
+        //     // service: 'Godaddy',
+        //     host: "smtp.hostinger.com",
+        //     secureConnection: false,
+        //     port: 465,
+        //     auth: {
+        //         user: "informes@123-tecnicos.com",
+        //         pass: "Empresa2021*"
+        //     }
+        // });
+
         let transporter = nodemailer.createTransport({
-            // service: 'Godaddy',
-            host: "smtp.hostinger.com",
-            secureConnection: false,
-            port: 465,
+            service: 'gmail',
             auth: {
-                user: "informes@123-tecnicos.com",
-                pass: "Empresa2021*"
+                user: "informeselectrociviles@gmail.com",
+                pass: "Electrociviles2022"
             }
         });
 
@@ -67,7 +75,7 @@ exports.emailAttention = (attention, attachments) => {
         <p>La atención fue cerrada exitosamente para mas información ver el archivo adjunto</p>
         </div>`
         let mailOptions = {
-            from: `informes@123-tecnicos.com`,
+            from: 'informeselectrociviles@gmail.com',
             to: attention.customer.email,
             subject: '📎',
             attachments,
