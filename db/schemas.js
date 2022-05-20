@@ -168,6 +168,9 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     description: String,
     status: String,
     expirationDateMaintenance: Date,
+    statusExpirationDateMaintenance: String,
+    provisioningAlertDate: Date,
+    statusProvisioningAlertDate: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
 })
 const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)

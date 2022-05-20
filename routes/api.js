@@ -1333,7 +1333,9 @@ router.post('/createCenterOfAttention', async (req, res) => {
         title: req.body.name,
         description: req.body.description,
         expirationDateMaintenance: req.body.expirationDateMaintenance,
-        expirationDateMaintenance: req.body.expirationDateMaintenance,
+        provisioningAlertDate: req.body.expirationDateMaintenance,
+        statusProvisioningAlertDate: 'pending',
+        statusAlertDateMaintenance: 'pending',
         customer: mongoose.Types.ObjectId(req.body.customer),
         status: 'active',
       });
