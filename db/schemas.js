@@ -167,13 +167,21 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     title: String,
     description: String,
     status: String,
-    expirationDateMaintenance: Date,
-    statusExpirationDateMaintenance: String,
-    provisioningAlertDate: Date,
-    statusProvisioningAlertDate: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    maintenances: [{ type: mongoose.Schema.Types.ObjectId, ref: 'maintenance' }],
 })
 const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
+
+const MaintenanceSchema = new mongoose.Schema({
+    type: String,
+    description: String,
+    expirationDateMaintenance: Date,
+    statusExpirationDateMaintenance: String,
+    maintenanceCost: mongoose.Schema.Types.Double,
+    provisioningAlertDate: Date,
+    statusProvisioningAlertDate: String,
+})
+const Maintenance = mongoose.model('maintenance', MaintenanceSchema)
 
 const ConfigurationSchema = new mongoose.Schema({
     title: String,
@@ -198,5 +206,6 @@ var schemas =
     Role,
     CenterOfAttention,
     Configuration,
+    Maintenance,
 };
 module.exports = schemas;

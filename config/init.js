@@ -946,6 +946,16 @@ exports.createMenu = () => {
 
 
 
+    var maintenance = new schemas.Page({
+        title: 'Mantenimientos',
+        href: '/maintenances',
+        icon: 'BsTools',
+        isParent: true,
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(maintenance)
+    menu.pages.push(maintenance)
 
     /** Reports */
     var reports = new schemas.Page({
@@ -985,7 +995,7 @@ exports.createMenu = () => {
     var usuarios = new schemas.Page({
         title: 'Usuarios',
         href: '/users',
-        icon: 'FaUsers',
+        icon: 'RiUserSettingsLine',
         isParent: false,
         roles: ['5a046fe9627e3526802b3847']
     })
@@ -995,7 +1005,7 @@ exports.createMenu = () => {
     var roles = new schemas.Page({
         title: 'Roles',
         href: '/roles',
-        icon: 'FaUserShield',
+        icon: 'BsShieldLock',
         isParent: false,
         children: [],
         roles: ['5a046fe9627e3526802b3847']
@@ -1010,9 +1020,20 @@ exports.createMenu = () => {
         roles: ['5a046fe9627e3526802b3847']
     })
     listPage.push(asignarRoles)
+
+    var values = new schemas.Page({
+        title: 'Valores',
+        href: '/values',
+        icon: 'ImSortNumbericDesc',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(values)
+
     pageAjustes.children.push(usuarios._id)
     pageAjustes.children.push(roles._id)
     pageAjustes.children.push(asignarRoles._id)
+    pageAjustes.children.push(values._id)
 
     menu.save()
 

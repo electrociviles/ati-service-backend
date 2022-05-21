@@ -142,7 +142,6 @@ const validateAttention = attention => {
     return errors > 0;
 }
 
-
 const validateBoard = board => {
     let errors = 0;
     board.itemsBoards.forEach(itemBoard => {
@@ -217,61 +216,84 @@ const getChildrens = (role, page) => {
 
 const semiAnnualMaintenance = () => {
 
-
     return new Promise(async (resolve, reject) => {
         try {
             let configurations = await schemas.Configuration.find();
-
-
             let result = await schemas.CenterOfAttention.aggregate([{
                 $project: {
                     statusProvisioningAlertDate: 1,
-                    remainingDays: {
+                    provisioningAlertDate: 1,
+                    expirationDateMaintenance: 1,
+                    statusExpirationDateMaintenance: 1,
+                    statusExpirationDateMaintenance: 1,
+                    remainingExpirationDateMaintenanceDays: {
                         $trunc: {
                             $divide: [{ $subtract: ['$expirationDateMaintenance', new Date()] }, 1000 * 60 * 60 * 24]
+                        }
+                    },
+                    remainingProvisioningAlertDays: {
+                        $trunc: {
+                            $divide: [{ $subtract: ['$provisioningAlertDate', new Date()] }, 1000 * 60 * 60 * 24]
                         }
                     }
                 }
             },
-            ]).exec()
+            ]).exec();
 
             console.log('result', result);
+            console.log('\n\n\n\n\n\n');
 
+            let status = true
+            if (result.length > 0 && status) {
+                // let remainingDays = result[0].remainingDays;
+                // let provisioningAlertDate = result[0].provisioningAlertDate;
+                // let statusProvisioningAlertDate = result[0].statusProvisioningAlertDate;
 
-            if (result.length > 0) {
-                let remainingDays = result[0].remainingDays;
+                let {
+                    provisioningAlertDate,
+                    expirationDateMaintenance,
+                    statusProvisioningAlertDate,
+                    statusExpirationDateMaintenance,
+                    remainingExpirationDateMaintenanceDays,
+                    remainingProvisioningAlertDays
+                } = result[0]
+                // provisioningAlertDate: 2023-01-30T05:00:00.000Z,
+                // statusProvisioningAlertDate: 'pending',
+                // statusExpirationDateMaintenance: 'pending',
+                // remainingExpirationDateMaintenanceDays: 40,
+                // remainingprovisioningAlertDays: 254
 
                 // Contabilidad usuario de toda tienda
                 // 1 un mes antes de vencer el mantenimiento se le envia un correo al ofset de cadata tienda 
                 // informandole que debe aprovisonar 6.000.000 de pesos
                 asyncForEach(configurations, async (configuration) => {
+
                     console.log('__________________________________________________');
                     console.log('configuration.value ', configuration.value);
                     console.log('configuration.key ', configuration.key);
-                    console.log('remainingDays ', remainingDays);
                     console.log('__________________________________________________');
-                    if (parseInt(configuration.value) == remainingDays) {
-                        switch (configuration.key) {
-                            case 'provisioningAlert':
-                                if (result[0].statusProvisioningAlertDate === 'pending') {
-                                    console.log('Enviar correo de aprovisionamiento... ');
-                                    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(result[0]._id) }, {
-                                        $set: {
-                                            statusProvisioningAlertDate: 'send',
-                                        }
-                                    }, {
-                                        multi: true
-                                    }).exec();
+
+                    switch (configuration.key) {
+                        case 'provisioningAlert':
+                            if (configuration.value == remainingProvisioningAlertDays) {
+                                if (statusProvisioningAlertDate === 'pending') {
+                                    sendMailProvisioningAlert(provisioningAlertDate, result[0]._id);
                                 }
-                                break;
+                            }
+                            break;
 
-                            case 'expirationDateMaintenance':
-
-                                break;
-                        }
-                        // Enviar email al oset y jefe de mantenimiento 
-                        // avisandole que el mantenimiento se va a vencer
+                        case 'expirationDateMaintenance':
+                            if (configuration.value == remainingExpirationDateMaintenanceDays) {
+                                if (statusExpirationDateMaintenance === 'pending') {
+                                    sendMailExpirationDateMaintenance(expirationDateMaintenance, result[0]._id);
+                                }
+                            }
+                            break;
                     }
+                    console.log('\n');
+                    // Enviar email al oset y jefe de mantenimiento 
+                    // avisandole que el mantenimiento se va a vencer
+
                 });
 
                 // Mantenimientos correctivos
@@ -290,6 +312,100 @@ const semiAnnualMaintenance = () => {
             });
         }
     });
+}
+
+const changeStatusProvisioningAlert = (id) => {
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusProvisioningAlertDate: 'send',
+        }
+    }, {
+        multi: true
+    }).exec();
+}
+const changeStatusExpirationMaintenance = (id) => {
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusExpirationDateMaintenance: 'send',
+        }
+    }, {
+        multi: true
+    }).exec();
+}
+const sendMailProvisioningAlert = (provisioningAlertDate, id) => {
+    console.log('Enviar correo de aprovisionamiento... ');
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusProvisioningAlertDate: 'send',
+        }
+    }, {
+        multi: true
+    }).exec();
+
+    addDateToProvisioningAlert(provisioningAlertDate, id);
+}
+const sendMailExpirationDateMaintenance = (expirationDateMaintenance, id) => {
+    console.log('Enviar correo de mantenimiento... ');
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusExpirationDateMaintenance: 'send',
+        }
+    }, {
+        multi: true
+    }).exec();
+
+
+    addDateToExpirationDateMaintenance(expirationDateMaintenance, id);
+}
+const addDateToProvisioningAlert = (provisioningAlertDate, id) => {
+    let date = new Date(provisioningAlertDate.toString());
+
+    var month = date.getUTCMonth() + 1;
+    var day = date.getUTCDate();
+    var year = date.getUTCFullYear();
+
+    console.log('day ' + day);
+    console.log('month ' + month);
+    console.log('year ' + year);
+
+    var newDate = new Date(year, month, day);
+    newDate.setMonth(newDate.getMonth() + 6);
+
+    console.log('Add 6 month to provisioningAlertDate ');
+    console.log('newDate ', newDate);
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusProvisioningAlertDate: 'pending',
+            provisioningAlertDate: newDate,
+        }
+    }, {
+        multi: true
+    }).exec();
+}
+const addDateToExpirationDateMaintenance = (expirationDateMaintenance, id) => {
+    let date = new Date(expirationDateMaintenance.toString());
+
+    var month = date.getUTCMonth() + 1;
+    var day = date.getUTCDate();
+    var year = date.getUTCFullYear();
+
+    console.log('day ' + day);
+    console.log('month ' + month);
+    console.log('year ' + year);
+
+    var newDate = new Date(year, month, day);
+    newDate.setMonth(newDate.getMonth() + 6);
+
+    console.log('Add 6 month to expirationDateMaintenance ');
+    console.log('newDate ', newDate);
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusExpirationDateMaintenance: 'pending',
+            expirationDateMaintenance: newDate,
+        }
+    }, {
+        multi: true
+    }).exec();
 }
 module.exports = {
     createToken,

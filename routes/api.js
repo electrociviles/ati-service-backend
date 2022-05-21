@@ -1102,14 +1102,16 @@ router.post('/updateToken', async (req, res) => {
 /** Users */
 router.post('/listUsers', async (req, res) => {
 
-  let { start, end } = req.body;
+  let { start, end, paginate } = req.body;
+  console.log(req.body);
 
   let query = schemas.User.find()
     .sort({ '_id': 1 })
     .populate('role')
 
-  if (req.body.paginate) {
-    query.skip(start)
+  if (paginate) {
+    query
+      .skip(start)
       .limit(end)
   }
 
@@ -1332,6 +1334,7 @@ router.post('/createCenterOfAttention', async (req, res) => {
       let centerOfAttention = schemas.CenterOfAttention({
         title: req.body.name,
         description: req.body.description,
+        maintenanceCost: req.body.maintenanceCost,
         expirationDateMaintenance: req.body.expirationDateMaintenance,
         provisioningAlertDate: req.body.expirationDateMaintenance,
         statusProvisioningAlertDate: 'pending',
