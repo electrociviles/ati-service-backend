@@ -1124,6 +1124,28 @@ router.post('/listUsers', async (req, res) => {
   })
 });
 
+router.post('/listConfigurations', async (req, res) => {
+
+  let { start, end, paginate } = req.body;
+  console.log(req.body);
+
+  let query = schemas.Configuration.find()
+
+  if (paginate) {
+    query
+      .skip(start)
+      .limit(end)
+  }
+
+  let count = await schemas.Configuration.countDocuments();
+
+  return new Promise((resolve, reject) => {
+    query.exec(function (_, users) {
+      res.json({ status: 'success', configuration, count })
+    })
+  })
+});
+
 router.post('/updateUser', upload.any("photo"), async (req, res) => {
   try {
     await fn.asyncForEach(req.files, async (file) => {
@@ -1401,8 +1423,6 @@ router.post('/restoreCenterOfAttention', async (req, res) => {
     res.json({ status: 'error', message: 'Ocurrió un error al activar el centro de atención' });
   }
 });
-
-
 
 router.post('/openItemBoard', async (req, res) => {
   console.log(req.body)
