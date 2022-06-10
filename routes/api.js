@@ -10,6 +10,7 @@ const bcrypt = require("bcrypt");
 var mongoose = require('mongoose');
 const config = require('./../config')
 const axios = require('axios').default;
+const authMiddleware = require("./../middleware/auth");
 
 
 router.post('/', (req, res, next) => {
@@ -60,7 +61,12 @@ router.post('/getMenuByRole', async (req, res) => {
       list.push(obj)
     }
   }
-  res.json({ status: 'success', menus });
+  let m = [
+    {
+      "pages": list
+    }
+  ]
+  res.json({ status: 'success', menus: m });
 });
 
 router.post('/getMenu', async (req, res) => {
@@ -118,8 +124,30 @@ router.post('/listProjects', async (req, res) => {
   res.json({ status: 'success', projects, count });
 });
 
-router.post('/listAttentions', async (req, res) => {
+
+router.post('/getAttention', authMiddleware, async (req, res) => {
+
+  let query = schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id)).populate({
+    path: 'attentionItems',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'customer',
+  }).populate({
+    path: 'attentionType',
+  });
+
+  let attention = await query.exec();
+  res.json({ status: 'success', attention });
+});
+
+router.post('/listAttentions', authMiddleware, async (req, res) => {
   let { start, end } = req.body;
+  let user = req.decoded;
+  // 5a046fe9627e3526802b3847
+
+  console.log("user", user)
 
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
@@ -128,7 +156,21 @@ router.post('/listAttentions', async (req, res) => {
     }]
   }).populate({
     path: 'customer',
+  }).populate({
+    path: 'attentionType',
+  }).populate({
+    path: 'descriptions',
+    populate: [{
+      path: "customer"
+    }]
   });
+
+  let rolesAllas = ["5a046fe9627e3526802b3847"];
+
+  if (!rolesAllas.includes(user.role)) {
+    query.where('customer').equals(mongoose.Types.ObjectId(user.id));
+
+  }
 
   if (req.body.paginate) {
     query.skip(start)
@@ -156,14 +198,14 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/listCustomers', async (req, res) => {
 
-  let { start, end } = req.body;
+  let { start, end, paginate, search } = req.body;
 
-  var query = schemas.Customer.find().select();
+  var query = schemas.User.find({ role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848") }).select();
 
-  if (req.body.search) {
-    query.where('name').equals(new RegExp(req.body.search, "i"));
+  if (search) {
+    query.where('name').equals(new RegExp(search, "i"));
   }
-  if (req.body.paginate) {
+  if (paginate) {
     query.skip(start)
       .limit(end);
   }
@@ -204,6 +246,82 @@ router.post('/updatedBoard', async (req, res) => {
       multi: true
     }).exec();
   });
+
+  res.json({ status: 'success' });
+
+})
+
+router.post('/updateAdditionalInformationAttention', authMiddleware, async (req, res) => {
+
+  console.log(req.body);
+  try {
+
+    let text = "";
+    let status = "";
+    if (req.body.action == "create") {
+      text = "Enviado al cliente";
+      status = "send";
+    } else if (req.body.action == "update") {
+      text = "Reenviado al cliente";
+      status = "resend";
+    }
+
+    var attentionDescription = schemas.AttentionDescription({
+      description: text,
+      statusSend: status,
+      date: new Date(),
+      customer: mongoose.Types.ObjectId(req.decoded.id),
+    });
+
+    attentionDescription.save();
+
+    schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        subTotal: parseFloat(req.body.subtotal),
+        administracion: parseFloat(req.body.administracion),
+        imprevistos: parseFloat(req.body.imprevistos),
+        utilidad: parseFloat(req.body.utilidad),
+        ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
+        total: parseFloat(req.body.total),
+        statusSend: status
+      },
+      $push: { "descriptions": attentionDescription._id },
+    }, {
+      multi: true
+    }).exec((_, attention) => {
+      res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
+    });
+
+  } catch (error) {
+    res.json({ status: 'success', message: "Ocurrió un error al ejecutar la operación" });
+  }
+
+
+})
+router.post('/confirmRejectAttentionCustomer', authMiddleware, async (req, res) => {
+
+  console.log(req.body);
+  console.log(req.decoded);
+  let { statusSend, description, id } = req.body
+
+
+  var attentionDescription = schemas.AttentionDescription({
+    description,
+    statusSend,
+    date: new Date(),
+    customer: mongoose.Types.ObjectId(req.decoded.id),
+  })
+  attentionDescription.save();
+
+  schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) },
+    {
+      $set: {
+        statusSend,
+      },
+      $push: { "descriptions": attentionDescription._id },
+    }, {
+    multi: true
+  }).exec();
 
   res.json({ status: 'success' });
 
@@ -523,7 +641,9 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       document: req.body.document,
       signature: "",
       status: "created",
+      price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
+      attentionType: mongoose.Types.ObjectId(req.body.attentionType),
       presave: true
     });
     await attention.save();
@@ -698,7 +818,7 @@ router.post('/finishProject', async (req, res) => {
 
 router.post('/openAttention', async (req, res) => {
   try {
-
+    console.log(req.body);
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         status: 'created'
@@ -876,7 +996,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
     res.json({ status: 'error' });
   }
 });
-
 
 router.post('/updateImageAround', upload.any("pictures"), async (req, res) => {
   console.log(req.body)
@@ -1102,14 +1221,16 @@ router.post('/updateToken', async (req, res) => {
 /** Users */
 router.post('/listUsers', async (req, res) => {
 
-  let { start, end } = req.body;
+  let { start, end, paginate } = req.body;
+  console.log(req.body);
 
   let query = schemas.User.find()
     .sort({ '_id': 1 })
     .populate('role')
 
-  if (req.body.paginate) {
-    query.skip(start)
+  if (paginate) {
+    query
+      .skip(start)
       .limit(end)
   }
 
@@ -1118,6 +1239,39 @@ router.post('/listUsers', async (req, res) => {
   return new Promise((resolve, reject) => {
     query.exec(function (_, users) {
       res.json({ status: 'success', users, count })
+    })
+  })
+});
+
+/** Users */
+router.post('/listAttentionTypes', async (req, res) => {
+
+  let attentionTypes = await schemas.AttentionType
+    .find()
+    .sort({ '_id': 1 })
+    .exec()
+  res.json({ status: 'success', attentionTypes })
+
+});
+
+router.post('/listConfigurations', async (req, res) => {
+
+  let { start, end, paginate } = req.body;
+  console.log(req.body);
+
+  let query = schemas.Configuration.find()
+
+  if (paginate) {
+    query
+      .skip(start)
+      .limit(end)
+  }
+
+  let count = await schemas.Configuration.countDocuments();
+
+  return new Promise((resolve, reject) => {
+    query.exec(function (_, users) {
+      res.json({ status: 'success', configuration, count })
     })
   })
 });
@@ -1274,17 +1428,28 @@ router.post('/restoreUser', async (req, res) => {
 router.post('/listCenterOfAttention', async (req, res) => {
 
 
-  let { start, end } = req.body;
+  let { start, end, paginate, customer } = req.body;
+
+  console.log(req.body);
 
   console.log(start, end);
+
+  let queryCount = schemas.CenterOfAttention.countDocuments();
 
   let query = schemas.CenterOfAttention.find()
     .sort({ '_id': 1 })
     .populate({ path: 'customer' })
-    .skip(start)
-    .limit(end)
 
-  let count = await schemas.CenterOfAttention.countDocuments();
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer))
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
+
+  }
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
+  let count = await queryCount.exec();
 
   return new Promise((resolve, reject) => {
     query.exec(function (_, centersOfAttention) {
@@ -1332,6 +1497,7 @@ router.post('/createCenterOfAttention', async (req, res) => {
       let centerOfAttention = schemas.CenterOfAttention({
         title: req.body.name,
         description: req.body.description,
+        maintenanceCost: req.body.maintenanceCost,
         expirationDateMaintenance: req.body.expirationDateMaintenance,
         provisioningAlertDate: req.body.expirationDateMaintenance,
         statusProvisioningAlertDate: 'pending',
@@ -1398,8 +1564,6 @@ router.post('/restoreCenterOfAttention', async (req, res) => {
     res.json({ status: 'error', message: 'Ocurrió un error al activar el centro de atención' });
   }
 });
-
-
 
 router.post('/openItemBoard', async (req, res) => {
   console.log(req.body)
@@ -1639,16 +1803,19 @@ router.post('/sendReportProject', async (req, res) => {
     }
 
 
-
-
     axios.post(config.pathServicePhp + 'project.php', data)
       .then(async (response) => {
 
+        var url = "";
         console.log(response.data)
-        await fn.sendEmailProject(response.data.data.id);
-
+        if (req.body.type == "email")
+          await fn.sendEmailProject(response.data.data.id);
+        else {
+          url = fs.readFileSync(`./pdf/${project._id}.pdf`, { encoding: 'base64' });
+        }
         res.json({
           status: 'success',
+          url,
           data: data,
           message: 'Reporte enviado exitosamente'
         });
@@ -1934,6 +2101,12 @@ router.post('/getRoles', async (req, res) => {
     })
   })
 });
+router.post('/getAttentionsTypes', async (req, res) => {
+
+  let attentionsTypes = await schemas.AttentionType.find()
+  res.json({ status: 'success', attentionsTypes })
+
+});
 
 router.post('/createRole', async (req, res) => {
 
@@ -2008,4 +2181,39 @@ router.post('/updateRole', async (req, res) => {
   }
 });
 
+router.post('/listNotifications', authMiddleware, async (req, res) => {
+
+  console.log(req.body);
+  console.log(req.decoded);
+
+  let rolesAllowed = ["5a046fe9627e3526802b3848"];
+  let notifications = [];
+  if (rolesAllowed.includes(req.body.role)) {
+    items = await schemas.Item.find({ mode: { $in: ['finding'] }, })
+
+    attentionPending = await schemas.Attention.find({ statusSend: { $in: ['send', 'resend'] }, customer: req.decoded.id })
+    attentionPending.map(attention => {
+      let status = '';
+      switch (attention.statusSend) {
+        case "send":
+          status = "Envida";
+          break;
+        case "resend":
+          status = "Reenviada";
+          break;
+
+      }
+      let notification = {
+        id: attention._id,
+        _id: attention._id,
+        created_at: Date(),
+        type: 'feature',
+        status,
+        title: `Atención ${attention.description} Pendiente por Aprobar`
+      }
+      notifications.push(notification)
+    })
+  }
+  res.json({ status: 'success', notifications });
+});
 module.exports = router;

@@ -67,7 +67,7 @@ var ProjectSchema = new mongoose.Schema({
     name: String,
     type: String,
     observation: String,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],
     aroundItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     outletSampling: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
@@ -124,6 +124,20 @@ var BoardSchema = new mongoose.Schema({
 });
 var Board = mongoose.model('Board', BoardSchema);
 
+const AttentionTypeSchema = new mongoose.Schema({
+    type: String,
+    tag: String,
+    status: String,
+})
+const AttentionType = mongoose.model('attention_type', AttentionTypeSchema)
+
+const AttentionDescriptionSchema = new mongoose.Schema({
+    description: String,
+    statusSend: String,
+    date: Date,
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+})
+const AttentionDescription = mongoose.model('attention_description', AttentionDescriptionSchema)
 
 var AttentionSchema = new mongoose.Schema({
     attentionItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
@@ -133,7 +147,17 @@ var AttentionSchema = new mongoose.Schema({
     status: String,
     names: String,
     document: String,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    statusSend: String,
+    subTotal: mongoose.Schema.Types.Double,
+    administracion: mongoose.Schema.Types.Double,
+    imprevistos: mongoose.Schema.Types.Double,
+    utilidad: mongoose.Schema.Types.Double,
+    ivaSobreUtilidad: mongoose.Schema.Types.Double,
+    total: mongoose.Schema.Types.Double,
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    attentionType: { type: mongoose.Schema.Types.ObjectId, ref: 'attention_type' },
+    descriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'attention_description' }],
+
     presave: Boolean,
 });
 var Attention = mongoose.model('Attention', AttentionSchema);
@@ -167,13 +191,21 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     title: String,
     description: String,
     status: String,
-    expirationDateMaintenance: Date,
-    statusExpirationDateMaintenance: String,
-    provisioningAlertDate: Date,
-    statusProvisioningAlertDate: String,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    maintenances: [{ type: mongoose.Schema.Types.ObjectId, ref: 'maintenance' }],
 })
 const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
+
+const MaintenanceSchema = new mongoose.Schema({
+    type: String,
+    description: String,
+    expirationDateMaintenance: Date,
+    statusExpirationDateMaintenance: String,
+    maintenanceCost: mongoose.Schema.Types.Double,
+    provisioningAlertDate: Date,
+    statusProvisioningAlertDate: String,
+})
+const Maintenance = mongoose.model('maintenance', MaintenanceSchema)
 
 const ConfigurationSchema = new mongoose.Schema({
     title: String,
@@ -198,5 +230,8 @@ var schemas =
     Role,
     CenterOfAttention,
     Configuration,
+    Maintenance,
+    AttentionType,
+    AttentionDescription,
 };
 module.exports = schemas;

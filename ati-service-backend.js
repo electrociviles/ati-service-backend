@@ -62,6 +62,8 @@ app.listen(config.port, function () {
   // init.createRole();
   // init.createMenu();
   // init.createConfiguration();
+  // init.createAttentionType()
+  // init.updateCustomerToUsers()
 });
 
 
@@ -69,7 +71,7 @@ let cronProcess = {
   semiAnnualMaintenance: {
     status: false,
     // times: '*/5 * * * * *'
-    times: '*/15 * * * * *'
+    times: '*/5 * * * * *'
   }
 }
 cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {

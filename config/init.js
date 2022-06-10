@@ -863,8 +863,7 @@ exports.createConfiguration = function () {
     list.push(configuration)
 
     schemas.Configuration.insertMany(list, function () { });
-};
-
+}
 exports.createMenu = () => {
 
     var menu = new schemas.Menu({
@@ -910,27 +909,15 @@ exports.createMenu = () => {
     menu.pages.push(projects)
 
 
-    /** Servicies */
-    var customers = new schemas.Page({
-        title: 'Clientes',
-        href: '/customers',
-        icon: 'ImUsers',
-        isParent: true,
-        children: [],
-        roles: ['5a046fe9627e3526802b3847']
-    })
-    listPage.push(customers)
-    menu.pages.push(customers)
-
-    var maintenance = new schemas.Page({
-        title: 'Mantenimientos',
-        href: '/maintenance',
-        icon: 'GiAutoRepair',
-        isParent: true,
-        children: [],
-        roles: ['5a046fe9627e3526802b3847']
-    })
-    listPage.push(maintenance)
+    // var maintenance = new schemas.Page({
+    //     title: 'Mantenimientos',
+    //     href: '/maintenance',
+    //     icon: 'GiAutoRepair',
+    //     isParent: true,
+    //     children: [],
+    //     roles: ['5a046fe9627e3526802b3847']
+    // })
+    // listPage.push(maintenance)
 
 
     var attentionCenter = new schemas.Page({
@@ -946,7 +933,6 @@ exports.createMenu = () => {
 
 
 
-
     /** Reports */
     var reports = new schemas.Page({
         title: 'Reportes',
@@ -959,8 +945,8 @@ exports.createMenu = () => {
     listPage.push(reports)
 
     var reports01 = new schemas.Page({
-        title: 'Mantenimiento 1',
-        href: '/reports/report1',
+        title: 'Atenciones',
+        href: '/reports/attentions',
         icon: 'RiFileList3Line',
         isParent: false,
         roles: ['5a046fe9627e3526802b3847']
@@ -985,7 +971,7 @@ exports.createMenu = () => {
     var usuarios = new schemas.Page({
         title: 'Usuarios',
         href: '/users',
-        icon: 'FaUsers',
+        icon: 'RiUserSettingsLine',
         isParent: false,
         roles: ['5a046fe9627e3526802b3847']
     })
@@ -995,7 +981,7 @@ exports.createMenu = () => {
     var roles = new schemas.Page({
         title: 'Roles',
         href: '/roles',
-        icon: 'FaUserShield',
+        icon: 'BsShieldLock',
         isParent: false,
         children: [],
         roles: ['5a046fe9627e3526802b3847']
@@ -1010,9 +996,20 @@ exports.createMenu = () => {
         roles: ['5a046fe9627e3526802b3847']
     })
     listPage.push(asignarRoles)
+
+    var values = new schemas.Page({
+        title: 'Valores',
+        href: '/values',
+        icon: 'ImSortNumbericDesc',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(values)
+
     pageAjustes.children.push(usuarios._id)
     pageAjustes.children.push(roles._id)
     pageAjustes.children.push(asignarRoles._id)
+    pageAjustes.children.push(values._id)
 
     menu.save()
 
@@ -1022,4 +1019,47 @@ exports.createMenu = () => {
         console.log(error)
     });
 
+}
+exports.createAttentionType = function () {
+
+    var list = new Array()
+
+    var AttentionType = schemas.AttentionType;
+    var attentionType = new AttentionType({
+        type: 'Emergencia',
+        status: 'active',
+    });
+    list.push(attentionType)
+
+    var attentionType = new AttentionType({
+        type: 'Programada',
+        status: 'active',
+    });
+    list.push(attentionType)
+
+    schemas.AttentionType.insertMany(list, function () { });
+}
+exports.updateCustomerToUsers = async function () {
+    var User = schemas.User;
+
+    var listUsers = []
+    var customers = await schemas.Customer.find();
+    customers.map(customer => {
+        console.log("customer ", customer);
+        var user = new User({
+            name: customer.name,
+            document_number: customer.nit,
+            photo: "default.png",
+            email: customer.email,
+            username: customer.nit,
+            password: customer.nit,
+            role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848"),
+            token: "",
+            status: "active",
+        });
+        listUsers.push(user)
+
+    })
+
+    schemas.User.insertMany(listUsers, function () { });
 }
