@@ -62,6 +62,8 @@ app.listen(config.port, function () {
   // init.createRole();
   // init.createMenu();
   // init.createConfiguration();
+  // init.createAttentionType()
+  // init.updateCustomerToUsers()
 });
 
 
