@@ -1794,9 +1794,9 @@ router.post('/sendReportProject', async (req, res) => {
       pathServicePhp: config.pathSavePdf
     }
 
-    console.log('*****************************************************************');
-    console.log(JSON.stringify(data, null, 6))
-    console.log('*****************************************************************');
+    // console.log('*****************************************************************');
+    // console.log(JSON.stringify(data, null, 6))
+    // console.log('*****************************************************************');
 
     if (fs.existsSync(`./pdf/${project._id}.pdf`)) {
       fs.unlinkSync(`./pdf/${project._id}.pdf`);
@@ -1813,6 +1813,8 @@ router.post('/sendReportProject', async (req, res) => {
         else {
           url = fs.readFileSync(`./pdf/${project._id}.pdf`, { encoding: 'base64' });
         }
+        console.log('*****************************************************************');
+        console.log(url)
         res.json({
           status: 'success',
           url,
