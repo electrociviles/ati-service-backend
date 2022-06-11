@@ -1810,14 +1810,12 @@ router.post('/sendReportProject', async (req, res) => {
         console.log(response.data)
         if (req.body.type == "email")
           await fn.sendEmailProject(response.data.data.id);
-        else {
-          url = fs.readFileSync(`./pdf/${project._id}.pdf`, { encoding: 'base64' });
-        }
-        console.log('*****************************************************************');
-        console.log(url)
+        // else {
+        //   url = fs.readFileSync(`./pdf/${project._id}.pdf`, { encoding: 'base64' });
+        // }
+
         res.json({
           status: 'success',
-          url,
           data: data,
           message: 'Reporte enviado exitosamente'
         });
