@@ -2216,4 +2216,54 @@ router.post('/listNotifications', authMiddleware, async (req, res) => {
   }
   res.json({ status: 'success', notifications });
 });
+
+router.post('/reportAttention', async (req, res) => {
+
+  console.log(req.body);
+  let { start, end, paginate, startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
+
+
+  let queryCount = schemas.Attention.countDocuments();
+
+  let query = schemas.Attention.find().populate({
+    path: 'attentionItems',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'customer',
+  }).populate({
+    path: 'attentionType',
+  }).populate({
+    path: 'descriptions',
+    populate: [{
+      path: "customer"
+    }]
+  });
+
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer))
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
+  }
+  // if (centerOfAttention)
+  //   query.where('typeService').equals(type)
+  // if (serviceType)
+  //   query.where('serviceType').equals(type)
+  // if (serviceStatus)
+  //   query.where('serviceStatus').equals(type)
+  if (startDate && endDate) {
+    let partsStartDate = startDate.split('T')
+    let partsEndDate = endDate.split('T')
+    query.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
+    queryCount.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
+  } else if (startDate) {
+    let partsStartDate = startDate.split('T')
+    query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
+    queryCount.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
+  }
+  let attentions = await query.exec();
+  let count = await queryCount.exec();
+  res.json({ status: 'success', attentions, count });
+});
+
 module.exports = router;
