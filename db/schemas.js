@@ -44,6 +44,7 @@ var UserSchema = new mongoose.Schema({
     role: { type: mongoose.Schema.Types.ObjectId, ref: 'role' },
     token: String,
     status: String,
+    phone: String,
 });
 UserSchema.pre('save', async function (next) {
 
@@ -148,6 +149,7 @@ var AttentionSchema = new mongoose.Schema({
     names: String,
     document: String,
     statusSend: String,
+    date: Date,
     subTotal: mongoose.Schema.Types.Double,
     administracion: mongoose.Schema.Types.Double,
     imprevistos: mongoose.Schema.Types.Double,
