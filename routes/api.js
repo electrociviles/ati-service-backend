@@ -298,6 +298,7 @@ router.post('/updateAdditionalInformationAttention', authMiddleware, async (req,
 
 
 })
+
 router.post('/confirmRejectAttentionCustomer', authMiddleware, async (req, res) => {
 
   console.log(req.body);
@@ -1601,11 +1602,62 @@ router.post('/sendEmailBoard', async (req, res) => {
 
 router.post('/sendEmailAttention', async (req, res) => {
 
-  await fn.sendEmailAttention(req.body.id);
+  await fn.sendEmailAttention(req.body.id, "email");
   res.json({
     status: 'success',
     message: 'Correo enviado'
   });
+});
+
+router.post('/downloadAttention', async (req, res) => {
+
+  try {
+
+    let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id));
+
+    if (!fn.validateAttention(attention)) {
+
+      let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id))
+        .populate({
+          path: 'customer'
+        }).populate({
+          path: 'attentionItems'
+        }).exec();
+
+
+      let data = {
+        date: fn.getDateReport(),
+        attention: attention,
+        pathServicePhp: config.pathSavePdf
+      }
+
+      axios.post(config.pathServicePhp + 'attention.php', data)
+        .then(async (response) => {
+
+          console.log("responsePhp", response.data)
+          res.json({
+            status: 'success',
+            message: 'Reporte enviado exitosamente'
+          });
+        })
+        .catch(function (error) {
+          console.log(error);
+        });
+
+    } else {
+      res.json({
+        status: 'error',
+        message: 'No se puede finalizar, porque la atencion se encuentra incompleta'
+      });
+    }
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      status: 'error',
+      message: 'Ocurrió un error al finalizar la atención'
+    });
+  }
 });
 
 router.post('/createCustomer', async (req, res) => {
@@ -2101,6 +2153,7 @@ router.post('/getRoles', async (req, res) => {
     })
   })
 });
+
 router.post('/getAttentionsTypes', async (req, res) => {
 
   let attentionsTypes = await schemas.AttentionType.find()
