@@ -1637,7 +1637,7 @@ router.post('/downloadAttention', async (req, res) => {
           console.log("responsePhp", response.data)
           res.json({
             status: 'success',
-            message: 'Reporte enviado exitosamente'
+            message: 'Documento generado exitosamente'
           });
         })
         .catch(function (error) {
