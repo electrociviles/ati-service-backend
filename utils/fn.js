@@ -97,7 +97,7 @@ const sendEmailProject = id => {
     });
 }
 
-const sendEmailAttention = id => {
+const sendEmailAttention = (id, action) => {
 
     return new Promise(async (resolve, reject) => {
         try {
@@ -116,7 +116,8 @@ const sendEmailAttention = id => {
                 content: pdfBase64,
                 encoding: 'base64'
             }];
-            mailer.emailAttention(attention, attachments);
+            if (action == "email")
+                mailer.emailAttention(attention, attachments);
 
             resolve(true);
 
@@ -134,9 +135,12 @@ const validateAttention = attention => {
     let errors = 0;
     if (attention.signature.length == 0) {
         errors++;
+        console.log("Falta Signature");
     }
     if (attention.attentionItems.length != 2) {
         errors++;
+        console.log("Faltan Items");
+
     }
 
     return errors > 0;
@@ -323,6 +327,7 @@ const changeStatusProvisioningAlert = (id) => {
         multi: true
     }).exec();
 }
+
 const changeStatusExpirationMaintenance = (id) => {
     schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
         $set: {
@@ -332,6 +337,7 @@ const changeStatusExpirationMaintenance = (id) => {
         multi: true
     }).exec();
 }
+
 const sendMailProvisioningAlert = (provisioningAlertDate, id) => {
     console.log('Enviar correo de aprovisionamiento... ');
     schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
