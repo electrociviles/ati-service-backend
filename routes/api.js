@@ -124,7 +124,6 @@ router.post('/listProjects', async (req, res) => {
   res.json({ status: 'success', projects, count });
 });
 
-
 router.post('/getAttention', authMiddleware, async (req, res) => {
 
   let query = schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id)).populate({
@@ -159,11 +158,13 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
   }).populate({
     path: 'attentionType',
   }).populate({
+    path: 'centerOfAttention',
+  }).populate({
     path: 'descriptions',
     populate: [{
       path: "customer"
     }]
-  });
+  }).sort({ '_id': -1 });
 
   let rolesAllas = ["5a046fe9627e3526802b3847"];
 
@@ -198,10 +199,14 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/listCustomers', async (req, res) => {
 
-  let { start, end, paginate, search } = req.body;
+  let { start, end, paginate, search, encargado, user } = req.body;
 
   var query = schemas.User.find({ role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848") }).select();
 
+  if (encargado && user) {
+    let usrEncargado = await schemas.User.findById(mongoose.Types.ObjectId(user));
+    query.where('_id').equals(mongoose.Types.ObjectId(usrEncargado.customer));
+  }
   if (search) {
     query.where('name').equals(new RegExp(search, "i"));
   }
@@ -251,50 +256,91 @@ router.post('/updatedBoard', async (req, res) => {
 
 })
 
-router.post('/updateAdditionalInformationAttention', authMiddleware, async (req, res) => {
+router.post('/updateAdditionalInformationAttention', upload.any("files"), authMiddleware, async (req, res) => {
 
   console.log(req.body);
-  try {
+  console.log(req.files);
+  // try {
 
-    let text = "";
-    let status = "";
-    if (req.body.action == "create") {
-      text = "Enviado al cliente";
-      status = "send";
-    } else if (req.body.action == "update") {
-      text = "Reenviado al cliente";
-      status = "resend";
-    }
+  // let text = "";
+  // let status = "";
+  // if (req.body.action == "create") {
+  //   text = "Enviado al cliente";
+  //   status = "send";
+  // } else if (req.body.action == "update") {
+  //   text = "Reenviado al cliente";
+  //   status = "resend";
+  // }
 
-    var attentionDescription = schemas.AttentionDescription({
-      description: text,
-      statusSend: status,
-      date: new Date(),
-      customer: mongoose.Types.ObjectId(req.decoded.id),
-    });
+  // var attentionDescription = schemas.AttentionDescription({
+  //   description: text,
+  //   statusSend: status,
+  //   date: new Date(),
+  //   customer: mongoose.Types.ObjectId(req.decoded.id),
+  // });
 
-    attentionDescription.save();
+  // attentionDescription.save();
 
-    schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
-      $set: {
-        subTotal: parseFloat(req.body.subtotal),
-        administracion: parseFloat(req.body.administracion),
-        imprevistos: parseFloat(req.body.imprevistos),
-        utilidad: parseFloat(req.body.utilidad),
-        ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
-        total: parseFloat(req.body.total),
-        statusSend: status
-      },
-      $push: { "descriptions": attentionDescription._id },
-    }, {
-      multi: true
-    }).exec((_, attention) => {
-      res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
-    });
+  // schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
+  //   $set: {
+  //     subTotal: parseFloat(req.body.subtotal),
+  //     administracion: parseFloat(req.body.administracion),
+  //     imprevistos: parseFloat(req.body.imprevistos),
+  //     utilidad: parseFloat(req.body.utilidad),
+  //     ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
+  //     total: parseFloat(req.body.total),
+  //     statusSend: status
+  //   },
+  //   $push: { "descriptions": attentionDescription._id },
+  // }, {
+  //   multi: true
+  // }).exec((_, attention) => {
+  //   res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
+  // });
 
-  } catch (error) {
-    res.json({ status: 'success', message: "Ocurrió un error al ejecutar la operación" });
-  }
+
+
+  console.log(req.files)
+  res.json({ status: 'success', message: "Operación realizada exitosamente", attention: {} })
+  // try {
+  //   await fn.asyncForEach(req.files, async (file) => {
+  //     let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+  //     console.log(fileName);
+  //     let src = await fs.createReadStream(file.path);
+  //     let dest = await fs.createWriteStream('./uploads/' + fileName);
+  //     src.pipe(dest);
+  //     src.on('end', async () => {
+  //       fs.unlinkSync(file.path);
+
+  //       const Jimp = require('jimp');
+  //       const image = await Jimp.read('./uploads/' + fileName);
+  //       await image.resize(400, Jimp.AUTO);
+  //       await image.quality(50);
+  //       await image.writeAsync('./uploads/' + fileName);
+
+  //       schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+  //         $push: { photos: { url: fileName, type: 'remote' } }
+  //       }, {
+  //         upsert: true
+  //       }).exec();
+
+  //       res.json({ status: 'success', url: fileName });
+
+  //     });
+  //     src.on('error', (err) => {
+  //       console.log(err);
+  //       res.json({ status: 'error' });
+  //     });
+  //   });
+
+  // } catch (error) {
+  //   console.log(error);
+  //   res.json({ status: 'error' });
+  // }
+
+  // } catch (error) {
+  //   res.json({ status: 'success', message: "Ocurrió un error al ejecutar la operación" });
+  //  }
 
 
 })
@@ -645,6 +691,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
       attentionType: mongoose.Types.ObjectId(req.body.attentionType),
+      centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
       presave: true
     });
     await attention.save();
@@ -985,6 +1032,9 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
         signature: fileNameSign,
         names: req.body.name,
         document: req.body.document,
+        price: parseFloat(req.body.price),
+        attentionType: mongoose.Types.ObjectId(req.body.attentionType),
+        centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
       }
     }, {
       upsert: true
@@ -1428,12 +1478,9 @@ router.post('/restoreUser', async (req, res) => {
 /** Center of Attentions */
 router.post('/listCenterOfAttention', async (req, res) => {
 
-
-  let { start, end, paginate, customer } = req.body;
+  let { start, end, paginate, customer, encargado, user } = req.body;
 
   console.log(req.body);
-
-  console.log(start, end);
 
   let queryCount = schemas.CenterOfAttention.countDocuments();
 
@@ -1445,6 +1492,9 @@ router.post('/listCenterOfAttention', async (req, res) => {
     query.where('customer').equals(mongoose.Types.ObjectId(customer))
     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
 
+  }
+  if (encargado && user) {
+    query.where("ofset").equals(mongoose.Types.ObjectId(user))
   }
   if (paginate) {
     query.skip(start)
@@ -1513,7 +1563,7 @@ router.post('/createCenterOfAttention', async (req, res) => {
         username: req.body.username,
         email: req.body.email,
         document_number: '',
-        role: mongoose.Types.ObjectId('5a046fe9627e3526802b3848'),
+        role: mongoose.Types.ObjectId('627d968a96a6a6b76f30c7e9'),
         photo: 'default.png',
         password: req.body.password,
         status: 'activo'
@@ -2288,6 +2338,8 @@ router.post('/reportAttention', async (req, res) => {
   }).populate({
     path: 'attentionType',
   }).populate({
+    path: 'centerOfAttention',
+  }).populate({
     path: 'descriptions',
     populate: [{
       path: "customer"
@@ -2298,12 +2350,16 @@ router.post('/reportAttention', async (req, res) => {
     query.where('customer').equals(mongoose.Types.ObjectId(customer))
     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
   }
-  // if (centerOfAttention)
-  //   query.where('typeService').equals(type)
-  // if (serviceType)
-  //   query.where('serviceType').equals(type)
-  // if (serviceStatus)
-  //   query.where('serviceStatus').equals(type)
+  if (centerOfAttention)
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention))
+
+  if (serviceType && serviceType != "1")
+    query.where('attentionType').equals(serviceType)
+
+  if (serviceStatus)
+    query.where('statusSend').equals(mongoose.Types.ObjectId(serviceStatus))
+
+
   if (startDate && endDate) {
     let partsStartDate = startDate.split('T')
     let partsEndDate = endDate.split('T')
@@ -2314,8 +2370,15 @@ router.post('/reportAttention', async (req, res) => {
     query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
     queryCount.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
   }
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
   let attentions = await query.exec();
   let count = await queryCount.exec();
+
+
+
   res.json({ status: 'success', attentions, count });
 });
 

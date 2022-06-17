@@ -3,11 +3,10 @@ var config = require('./../config')
 require('mongoose-double')(mongoose);
 
 mongoose.Promise = global.Promise
+mongoose.set('debug', false);
 
-console.log(config);
 if (process.env.NODE_ENV == 'production') {
     mongoose.connect(config.db.url, {
-
         'auth': { 'authSource': 'admin' },
         'user': config.db.user,
         'pass': config.db.pass,
@@ -42,6 +41,7 @@ var UserSchema = new mongoose.Schema({
     username: String,
     password: String,
     role: { type: mongoose.Schema.Types.ObjectId, ref: 'role' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     token: String,
     status: String,
     phone: String,
@@ -158,6 +158,7 @@ var AttentionSchema = new mongoose.Schema({
     total: mongoose.Schema.Types.Double,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     attentionType: { type: mongoose.Schema.Types.ObjectId, ref: 'attention_type' },
+    centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'centerOfAttention' },
     descriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'attention_description' }],
 
     presave: Boolean,
@@ -194,6 +195,7 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     description: String,
     status: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    ofset: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     maintenances: [{ type: mongoose.Schema.Types.ObjectId, ref: 'maintenance' }],
 })
 const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
