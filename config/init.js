@@ -12,6 +12,101 @@ var colors = {
 };
 
 /** Creacion parametros **/
+exports.NewItem = function () {
+    var Item = schemas.Item;
+    var list = new Array();
+    let position = 1;
+
+
+    var item = {
+        _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        mode: 'emergency_light',
+        title: "Iluminación de emergencia",
+        description: "",
+        group: 'emergency_light',
+        type: "emergency_light",
+        gallery: false,
+        hasValue: false,
+        position,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+
+
+    list.push(item);
+    position++;
+
+    var item = {
+        _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7fa'),
+        mode: 'ups_autonomy',
+        title: "Autonomía de UPS",
+        description: "",
+        group: 'ups_autonomy',
+        type: "ups_autonomy",
+        gallery: false,
+        hasValue: false,
+        position,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+    position++;
+
+
+    Item.insertMany(list).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+}
+exports.UpdateProjectSetNewItems = async function () {
+    let projects = await schemas.Project.find();
+    await fn.asyncForEach(projects, async project => {
+
+
+        items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
+        await fn.asyncForEach(items, async item => {
+            let itemImage = schemas.ItemImage({
+                project: project._id,
+                item: mongoose.Types.ObjectId(item._id),
+                status: 'activo',
+                photos: [],
+                value: 0.0,
+            });
+            await itemImage.save();
+            emergencylight.push(itemImage);
+        });
+        project.emergencylight = emergencylight;
+
+        items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
+        await fn.asyncForEach(items, async item => {
+            let itemImage = schemas.ItemImage({
+                project: project._id,
+                item: mongoose.Types.ObjectId(item._id),
+                status: 'activo',
+                photos: [],
+                value: 0.0,
+                percentBatery: 0.0,
+                hour: ""
+            });
+            await itemImage.save();
+            upsAutonomy.push(itemImage);
+        });
+        project.upsAutonomy = upsAutonomy;
+
+
+    });
+}
 exports.Start = function () {
     var Item = schemas.Item;
     var list = new Array();
@@ -882,8 +977,6 @@ exports.Start = function () {
     position++;
 
 
-
-
     Item.insertMany(list).then(function () {
         console.log("Data inserted")
     }).catch(function (error) {
@@ -1010,8 +1103,8 @@ exports.createMenu = () => {
 
     /** Servicies */
     var projects = new schemas.Page({
-        title: 'Projects',
-        href: '/projects',
+        title: 'Mantenimientos',
+        href: '/maintenances',
         icon: 'VscProject',
         isParent: false,
         children: [],

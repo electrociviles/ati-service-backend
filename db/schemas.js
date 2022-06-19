@@ -68,10 +68,13 @@ var ProjectSchema = new mongoose.Schema({
     name: String,
     type: String,
     observation: String,
+    downloaded: Boolean,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],
     aroundItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     outletSampling: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
+    emergencylight: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
+    upsAutonomy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
 });
 var Project = mongoose.model('Project', ProjectSchema);
 
@@ -80,6 +83,9 @@ var ItemImageSchema = new mongoose.Schema({
     project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
     item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
     photos: [],
+    hasHour: Boolean,
+    hour: String,
+    percentBatery: mongoose.Schema.Types.Double,
     status: String,
     value: mongoose.Schema.Types.Double,
 });
@@ -95,6 +101,7 @@ var ItemSchema = new mongoose.Schema({
     hasValue: Boolean,
     placeHolder: String,
     letterOne: String,
+    position: Number,
     letterTwo: String,
     colorOne: String,
     colorTwo: String,
@@ -112,6 +119,8 @@ var ItemBoardSchema = new mongoose.Schema({
     observations: String,
     title: String,
     value: mongoose.Schema.Types.Double,
+    percentBatery: mongoose.Schema.Types.Double,
+    status: String,
 });
 var ItemBoard = mongoose.model('Item_Board', ItemBoardSchema);
 
@@ -157,6 +166,7 @@ var AttentionSchema = new mongoose.Schema({
     ivaSobreUtilidad: mongoose.Schema.Types.Double,
     total: mongoose.Schema.Types.Double,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     attentionType: { type: mongoose.Schema.Types.ObjectId, ref: 'attention_type' },
     centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'centerOfAttention' },
     descriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'attention_description' }],
