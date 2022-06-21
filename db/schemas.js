@@ -158,6 +158,7 @@ var AttentionSchema = new mongoose.Schema({
     names: String,
     document: String,
     statusSend: String,
+    file: String,
     date: Date,
     subTotal: mongoose.Schema.Types.Double,
     administracion: mongoose.Schema.Types.Double,
@@ -206,20 +207,14 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     status: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     ofset: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    maintenances: [{ type: mongoose.Schema.Types.ObjectId, ref: 'maintenance' }],
-})
-const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
-
-const MaintenanceSchema = new mongoose.Schema({
-    type: String,
-    description: String,
+    maintenanceCost: mongoose.Schema.Types.Double,
     expirationDateMaintenance: Date,
     statusExpirationDateMaintenance: String,
-    maintenanceCost: mongoose.Schema.Types.Double,
     provisioningAlertDate: Date,
     statusProvisioningAlertDate: String,
 })
-const Maintenance = mongoose.model('maintenance', MaintenanceSchema)
+const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
+
 
 const ConfigurationSchema = new mongoose.Schema({
     title: String,
@@ -244,7 +239,6 @@ var schemas =
     Role,
     CenterOfAttention,
     Configuration,
-    Maintenance,
     AttentionType,
     AttentionDescription,
 };

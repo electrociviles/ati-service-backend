@@ -309,92 +309,83 @@ router.post('/updateAttention', upload.any("files"), authMiddleware, async (req,
 
 router.post('/updateAdditionalInformationAttention', upload.any("files"), authMiddleware, async (req, res) => {
 
-  console.log(req.body);
-  console.log(req.files);
+  try {
 
+    let text = "";
+    let status = "";
+    if (req.body.action == "create") {
+      text = "Enviado al cliente";
+      status = "send";
+    } else if (req.body.action == "update") {
+      text = "Reenviado al cliente";
+      status = "resend";
+    }
 
-  // try {
+    var attentionDescription = schemas.AttentionDescription({
+      description: text,
+      statusSend: status,
+      date: new Date(),
+      customer: mongoose.Types.ObjectId(req.decoded.id),
+    });
 
-  // let text = "";
-  // let status = "";
-  // if (req.body.action == "create") {
-  //   text = "Enviado al cliente";
-  //   status = "send";
-  // } else if (req.body.action == "update") {
-  //   text = "Reenviado al cliente";
-  //   status = "resend";
-  // }
+    attentionDescription.save();
+    let fileName = "";
 
-  // var attentionDescription = schemas.AttentionDescription({
-  //   description: text,
-  //   statusSend: status,
-  //   date: new Date(),
-  //   customer: mongoose.Types.ObjectId(req.decoded.id),
-  // });
+    await fn.asyncForEach(req.files, async (file) => {
+      fileName = "attention_" + fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+      let src = await fs.createReadStream(file.path);
+      let dest = await fs.createWriteStream('./pdf/' + fileName);
+      src.pipe(dest);
+      src.on('end', async () => {
+        fs.unlinkSync(file.path);
 
-  // attentionDescription.save();
+      });
+      src.on('error', (err) => {
+        console.log(err);
+        res.json({ status: 'error' });
+      });
+    });
 
-  // schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
-  //   $set: {
-  //     subTotal: parseFloat(req.body.subtotal),
-  //     administracion: parseFloat(req.body.administracion),
-  //     imprevistos: parseFloat(req.body.imprevistos),
-  //     utilidad: parseFloat(req.body.utilidad),
-  //     ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
-  //     total: parseFloat(req.body.total),
-  //     statusSend: status
-  //   },
-  //   $push: { "descriptions": attentionDescription._id },
-  // }, {
-  //   multi: true
-  // }).exec((_, attention) => {
-  //   res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
-  // });
+    schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        subTotal: parseFloat(req.body.subtotal),
+        administracion: parseFloat(req.body.administracion),
+        imprevistos: parseFloat(req.body.imprevistos),
+        utilidad: parseFloat(req.body.utilidad),
+        ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
+        total: parseFloat(req.body.total),
+        statusSend: status,
+        file: fileName
+      },
+      $push: { "descriptions": attentionDescription._id },
+    }, {
+      multi: true
+    }).exec(async () => {
+      let attention = await schemas.Attention.findById(req.body.id).populate({
+        path: 'attentionItems',
+        populate: [{
+          path: "item"
+        }]
+      }).populate({
+        path: 'customer',
+      }).populate({
+        path: 'descriptions',
+      }).populate({
+        path: 'centerOfAttention',
+      }).populate({
+        path: 'attentionType',
+      }).populate({
+        path: 'creator',
+      }).exec();
 
+      res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
+    });
 
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
 
-  console.log(req.files)
-  res.json({ status: 'success', message: "Operación realizada exitosamente", attention: {} })
-  // try {
-  //   await fn.asyncForEach(req.files, async (file) => {
-  //     let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-  //     console.log(fileName);
-  //     let src = await fs.createReadStream(file.path);
-  //     let dest = await fs.createWriteStream('./uploads/' + fileName);
-  //     src.pipe(dest);
-  //     src.on('end', async () => {
-  //       fs.unlinkSync(file.path);
-
-  //       const Jimp = require('jimp');
-  //       const image = await Jimp.read('./uploads/' + fileName);
-  //       await image.resize(400, Jimp.AUTO);
-  //       await image.quality(50);
-  //       await image.writeAsync('./uploads/' + fileName);
-
-  //       schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-  //         $push: { photos: { url: fileName, type: 'remote' } }
-  //       }, {
-  //         upsert: true
-  //       }).exec();
-
-  //       res.json({ status: 'success', url: fileName });
-
-  //     });
-  //     src.on('error', (err) => {
-  //       console.log(err);
-  //       res.json({ status: 'error' });
-  //     });
-  //   });
-
-  // } catch (error) {
-  //   console.log(error);
-  //   res.json({ status: 'error' });
-  // }
-
-  // } catch (error) {
-  //   res.json({ status: 'success', message: "Ocurrió un error al ejecutar la operación" });
-  //  }
-
+  }
 
 })
 
@@ -801,6 +792,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       document: req.body.document,
       signature: "",
       status: "created",
+      statusSend: "pending",
       price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
       attentionType: mongoose.Types.ObjectId(req.body.attentionType),
@@ -1700,6 +1692,13 @@ router.post('/createCenterOfAttention', async (req, res) => {
         status: 'activo'
       });
       await user.save();
+
+      let id = centerOfAttention._id;
+
+      centerOfAttention = await schemas.CenterOfAttention.findById(mongoose.Types.ObjectId(id))
+        .sort({ '_id': 1 })
+        .populate({ path: 'customer' })
+
 
       res.json({ status: 'success', centerOfAttention });
 
