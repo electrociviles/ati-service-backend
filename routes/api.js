@@ -233,7 +233,7 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/listCustomers', async (req, res) => {
 
-  let { start, end, paginate, search, encargado, user } = req.body;
+  let { start, end, paginate, search, encargado, user, customer } = req.body;
 
   var query = schemas.User.find({ role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848") }).select();
 
@@ -243,6 +243,9 @@ router.post('/listCustomers', async (req, res) => {
   }
   if (search) {
     query.where('name').equals(new RegExp(search, "i"));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
   }
   if (paginate) {
     query.skip(start)
@@ -776,7 +779,8 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
         value: 0.0,
         percentBatery: 0.0,
         hour: "",
-        hasHour: false
+        hasHour: false,
+        date: new Date()
       })
       await attentionImage.save();
       listAttentionImage.push(attentionImage);
