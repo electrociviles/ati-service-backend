@@ -814,7 +814,8 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
     res.json({ status: 'success', attention });
 
   } catch (error) {
-    res.json({ status: 'success' });
+    console.log(error)
+    res.json({ status: 'error', "message": "Ocurrió un error al registrar la atención" });
   }
 
 });
