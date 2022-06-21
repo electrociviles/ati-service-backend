@@ -290,7 +290,7 @@ router.post('/updatedBoard', async (req, res) => {
 
 })
 
-router.post('/updateAttention', upload.any("files"), authMiddleware, async (req, res) => {
+router.post('/updateAttentionWeb', upload.any("files"), authMiddleware, async (req, res) => {
 
   console.log(req.body);
   console.log(req.files);
