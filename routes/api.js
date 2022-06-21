@@ -1134,6 +1134,11 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
       });
     }
 
+    let centerOfAttention = null;
+    if (req.body.centerOfAttention) {
+      centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
+    }
+
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         description: req.body.observations,
@@ -1144,7 +1149,7 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
         document: req.body.document,
         price: parseFloat(req.body.price),
         attentionType: mongoose.Types.ObjectId(req.body.attentionType),
-        centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
+        centerOfAttention: centerOfAttention,
       }
     }, {
       upsert: true
