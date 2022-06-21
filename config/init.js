@@ -12,9 +12,105 @@ var colors = {
 };
 
 /** Creacion parametros **/
+exports.NewItem = function () {
+    var Item = schemas.Item;
+    var list = new Array();
+    let position = 1;
+
+
+    var item = {
+        _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        mode: 'emergency_light',
+        title: "Iluminación de emergencia",
+        description: "",
+        group: 'emergency_light',
+        type: "emergency_light",
+        gallery: false,
+        hasValue: false,
+        position,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+
+
+    list.push(item);
+    position++;
+
+    var item = {
+        _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7fa'),
+        mode: 'ups_autonomy',
+        title: "Autonomía de UPS",
+        description: "",
+        group: 'ups_autonomy',
+        type: "ups_autonomy",
+        gallery: false,
+        hasValue: false,
+        position,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+    };
+    list.push(item);
+    position++;
+
+
+    Item.insertMany(list).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+}
+exports.UpdateProjectSetNewItems = async function () {
+    let projects = await schemas.Project.find();
+    await fn.asyncForEach(projects, async project => {
+
+
+        items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
+        await fn.asyncForEach(items, async item => {
+            let itemImage = schemas.ItemImage({
+                project: project._id,
+                item: mongoose.Types.ObjectId(item._id),
+                status: 'activo',
+                photos: [],
+                value: 0.0,
+            });
+            await itemImage.save();
+            emergencylight.push(itemImage);
+        });
+        project.emergencylight = emergencylight;
+
+        items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
+        await fn.asyncForEach(items, async item => {
+            let itemImage = schemas.ItemImage({
+                project: project._id,
+                item: mongoose.Types.ObjectId(item._id),
+                status: 'activo',
+                photos: [],
+                value: 0.0,
+                percentBatery: 0.0,
+                hour: ""
+            });
+            await itemImage.save();
+            upsAutonomy.push(itemImage);
+        });
+        project.upsAutonomy = upsAutonomy;
+
+
+    });
+}
 exports.Start = function () {
     var Item = schemas.Item;
     var list = new Array();
+    let position = 1;
 
     /** Voltaje Item trifasico */
     var item = {
@@ -26,6 +122,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "R",
         letterTwo: "S",
@@ -35,6 +132,7 @@ exports.Start = function () {
         textColorTwo: colors.white,
     };
     list.push(item);
+    position++;
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f664d'),
@@ -45,6 +143,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position: 1,
         placeHolder: "Voltaje",
         letterOne: "R",
         letterTwo: "T",
@@ -55,6 +154,8 @@ exports.Start = function () {
 
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f664e'),
@@ -65,6 +166,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "S",
         letterTwo: "T",
@@ -74,6 +176,8 @@ exports.Start = function () {
         textColorTwo: colors.white,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f664f'),
@@ -84,6 +188,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "R",
         letterTwo: "N",
@@ -93,6 +198,8 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6650'),
@@ -103,6 +210,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "S",
         letterTwo: "N",
@@ -112,6 +220,8 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6651'),
@@ -122,6 +232,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "T",
         letterTwo: "N",
@@ -131,6 +242,8 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6652'),
@@ -141,6 +254,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "N",
         letterTwo: "t",
@@ -150,6 +264,7 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
 
 
     /** Voltaje Item monofasico */
@@ -162,6 +277,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "Fase 1",
         letterTwo: "Fase 2",
@@ -171,6 +287,8 @@ exports.Start = function () {
         textColorTwo: colors.white,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6654'),
@@ -181,6 +299,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "Fase 1",
         letterTwo: "N",
@@ -190,6 +309,8 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6655'),
@@ -200,6 +321,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "Fase 2",
         letterTwo: "N",
@@ -209,6 +331,8 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6656'),
@@ -219,6 +343,7 @@ exports.Start = function () {
         type: "voltaje",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Voltaje",
         letterOne: "N",
         letterTwo: "t",
@@ -228,6 +353,8 @@ exports.Start = function () {
         textColorTwo: colors.black,
     };
     list.push(item);
+    position++;
+
 
     /** Corriente trifasico */
     var item = {
@@ -239,6 +366,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -248,6 +376,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6658'),
@@ -258,6 +388,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -267,6 +398,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6659'),
@@ -277,6 +410,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -286,6 +420,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f665a'),
@@ -296,6 +432,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -305,6 +442,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f665b'),
@@ -315,6 +454,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -324,6 +464,7 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
 
 
     /** Corriente monofisico */
@@ -336,6 +477,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -345,6 +487,7 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f665d'),
@@ -355,6 +498,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -364,6 +508,7 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f665e'),
@@ -374,6 +519,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -383,6 +529,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f665f'),
@@ -393,6 +541,7 @@ exports.Start = function () {
         type: "corriente",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "Corriente",
         letterOne: "",
         letterTwo: "",
@@ -402,6 +551,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
 
     /** General antes */
@@ -414,6 +565,7 @@ exports.Start = function () {
         type: "board_marking",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -423,6 +575,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6661'),
@@ -433,6 +587,7 @@ exports.Start = function () {
         type: "gallery_before_maintenance",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -442,6 +597,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6662'),
@@ -453,6 +610,7 @@ exports.Start = function () {
         placeHolder: "Grados",
         hasValue: true,
         gallery: false,
+        position,
         letterOne: "",
         letterTwo: "",
         colorOne: colors.transparent,
@@ -461,6 +619,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     /** General después */
     var item = {
@@ -472,6 +632,7 @@ exports.Start = function () {
         type: "gallery_after_maintenance",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -481,6 +642,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6664'),
@@ -491,6 +654,7 @@ exports.Start = function () {
         type: "degress_termography",
         gallery: false,
         hasValue: true,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -500,6 +664,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6665'),
@@ -510,6 +676,7 @@ exports.Start = function () {
         type: "circuit_marking",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -519,6 +686,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a035'),
@@ -529,6 +698,7 @@ exports.Start = function () {
         type: "circuit_marking",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -538,6 +708,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6666'),
@@ -548,6 +720,7 @@ exports.Start = function () {
         type: "principal_protection",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -557,6 +730,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6667'),
@@ -567,6 +742,7 @@ exports.Start = function () {
         type: "single_line_diagram",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -576,6 +752,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     /** Items attention */
     var item = {
@@ -587,6 +765,7 @@ exports.Start = function () {
         type: "before",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -596,6 +775,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('621bbe991d33b069860f6669'),
@@ -606,6 +787,7 @@ exports.Start = function () {
         type: "after",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -615,6 +797,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03a'),
@@ -625,6 +809,7 @@ exports.Start = function () {
         type: "before",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -634,6 +819,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
 
     var item = {
@@ -645,6 +832,7 @@ exports.Start = function () {
         type: "after",
         gallery: false,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -654,6 +842,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     /** Outlet sampling  */
     var item = {
@@ -665,6 +855,7 @@ exports.Start = function () {
         type: "before",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -674,6 +865,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03d'),
@@ -684,6 +877,7 @@ exports.Start = function () {
         type: "before",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -693,6 +887,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03e'),
@@ -703,6 +899,7 @@ exports.Start = function () {
         type: "before",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -712,6 +909,8 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
+
 
     var item = {
         _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a03f'),
@@ -722,6 +921,7 @@ exports.Start = function () {
         type: "before",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -731,6 +931,7 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
 
     var item = {
         _id: mongoose.Types.ObjectId('623eb9bce56a988dae00a040'),
@@ -741,6 +942,7 @@ exports.Start = function () {
         type: "before",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -750,6 +952,7 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
 
 
     var item = {
@@ -761,6 +964,7 @@ exports.Start = function () {
         type: "finding",
         gallery: true,
         hasValue: false,
+        position,
         placeHolder: "",
         letterOne: "",
         letterTwo: "",
@@ -770,6 +974,7 @@ exports.Start = function () {
         textColorTwo: colors.transparent,
     };
     list.push(item);
+    position++;
 
 
     Item.insertMany(list).then(function () {
@@ -898,8 +1103,8 @@ exports.createMenu = () => {
 
     /** Servicies */
     var projects = new schemas.Page({
-        title: 'Projects',
-        href: '/projects',
+        title: 'Mantenimientos',
+        href: '/maintenances',
         icon: 'VscProject',
         isParent: false,
         children: [],

@@ -11,7 +11,8 @@ var mongoose = require('mongoose');
 const config = require('./../config')
 const axios = require('axios').default;
 const authMiddleware = require("./../middleware/auth");
-
+const moment = require('moment');
+moment.locale('es');
 
 router.post('/', (req, res, next) => {
   res.json({ status: 'respond with a resource' });
@@ -88,6 +89,7 @@ router.post('/getMenu', async (req, res) => {
 router.post('/listProjects', async (req, res) => {
 
   let { start, end } = req.body;
+  let queryCount = schemas.Project.countDocuments();
 
   var query = schemas.Project.find().populate({
     path: 'boards',
@@ -109,18 +111,40 @@ router.post('/listProjects', async (req, res) => {
     populate: [{
       path: "item"
     }]
-  })
+  }).populate({
+    path: 'emergencylight',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'upsAutonomy',
+    populate: [{
+      path: "item"
+    }]
+  }).sort({ '_id': -1 });
   if (req.body.paginate) {
     query.skip(start)
       .limit(end);
   }
 
+  console.log(req.body);
+
 
   if (req.body.search) {
     query.where('name').equals(new RegExp(req.body.search, "i"));
+    queryCount.where('name').equals(new RegExp(req.body.search, "i"));
+  }
+  if (req.body.source == "web") {
+    query.where('downloaded').equals(false);
+    queryCount.where('downloaded').equals(false);
+  }
+  if (req.body.downloaded) {
+    console.log("Dessssss");
+    query.where('downloaded').equals(true);
+    queryCount.where('downloaded').equals(true);
   }
   let projects = await query.exec();
-  let count = await schemas.Project.countDocuments();
+  let count = await queryCount.exec();
   res.json({ status: 'success', projects, count });
 });
 
@@ -145,9 +169,10 @@ router.post('/getAttention', authMiddleware, async (req, res) => {
 router.post('/listAttentions', authMiddleware, async (req, res) => {
   let { start, end } = req.body;
   let user = req.decoded;
+  console.log("Ussssser ", user)
   // 5a046fe9627e3526802b3847
 
-  console.log("user", user)
+  console.log("Body ", req.body)
 
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
@@ -159,17 +184,27 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
   }).populate({
     path: 'attentionType',
   }).populate({
+    path: 'centerOfAttention',
+  }).populate({
     path: 'descriptions',
     populate: [{
       path: "customer"
     }]
-  });
+  }).sort({ '_id': -1 });
 
   let rolesAllas = ["5a046fe9627e3526802b3847"];
 
   if (!rolesAllas.includes(user.role)) {
-    query.where('customer').equals(mongoose.Types.ObjectId(user.id));
+    console.log("aaaaadlkadlasdlknmadmlfmaslfmslkdfmskadmklsadmsdklf");
+    if (user.role == "5a046fe9627e3526802b3848") {
+      query.where('customer').equals(mongoose.Types.ObjectId(user.id));
+      console.log("Customer")
+    }
+    else {
+      query.where('creator').equals(mongoose.Types.ObjectId(user.id));
+      console.log("Creator")
 
+    }
   }
 
   if (req.body.paginate) {
@@ -198,10 +233,14 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/listCustomers', async (req, res) => {
 
-  let { start, end, paginate, search } = req.body;
+  let { start, end, paginate, search, encargado, user } = req.body;
 
   var query = schemas.User.find({ role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848") }).select();
 
+  if (encargado && user) {
+    let usrEncargado = await schemas.User.findById(mongoose.Types.ObjectId(user));
+    query.where('_id').equals(mongoose.Types.ObjectId(usrEncargado.customer));
+  }
   if (search) {
     query.where('name').equals(new RegExp(search, "i"));
   }
@@ -251,50 +290,110 @@ router.post('/updatedBoard', async (req, res) => {
 
 })
 
-router.post('/updateAdditionalInformationAttention', authMiddleware, async (req, res) => {
+router.post('/updateAttention', upload.any("files"), authMiddleware, async (req, res) => {
 
   console.log(req.body);
-  try {
+  console.log(req.files);
+  let { id, name, description } = req.body
 
-    let text = "";
-    let status = "";
-    if (req.body.action == "create") {
-      text = "Enviado al cliente";
-      status = "send";
-    } else if (req.body.action == "update") {
-      text = "Reenviado al cliente";
-      status = "resend";
-    }
+  schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+    $set: { title: name, description }
+  }, {
+    upsert: true
+  }).exec();
 
-    var attentionDescription = schemas.AttentionDescription({
-      description: text,
-      statusSend: status,
-      date: new Date(),
-      customer: mongoose.Types.ObjectId(req.decoded.id),
-    });
 
-    attentionDescription.save();
+  res.json({ status: 'success', message: "Atención actualizada exitosamente" })
 
-    schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
-      $set: {
-        subTotal: parseFloat(req.body.subtotal),
-        administracion: parseFloat(req.body.administracion),
-        imprevistos: parseFloat(req.body.imprevistos),
-        utilidad: parseFloat(req.body.utilidad),
-        ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
-        total: parseFloat(req.body.total),
-        statusSend: status
-      },
-      $push: { "descriptions": attentionDescription._id },
-    }, {
-      multi: true
-    }).exec((_, attention) => {
-      res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
-    });
+})
 
-  } catch (error) {
-    res.json({ status: 'success', message: "Ocurrió un error al ejecutar la operación" });
-  }
+router.post('/updateAdditionalInformationAttention', upload.any("files"), authMiddleware, async (req, res) => {
+
+  console.log(req.body);
+  console.log(req.files);
+
+
+  // try {
+
+  // let text = "";
+  // let status = "";
+  // if (req.body.action == "create") {
+  //   text = "Enviado al cliente";
+  //   status = "send";
+  // } else if (req.body.action == "update") {
+  //   text = "Reenviado al cliente";
+  //   status = "resend";
+  // }
+
+  // var attentionDescription = schemas.AttentionDescription({
+  //   description: text,
+  //   statusSend: status,
+  //   date: new Date(),
+  //   customer: mongoose.Types.ObjectId(req.decoded.id),
+  // });
+
+  // attentionDescription.save();
+
+  // schemas.Attention.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
+  //   $set: {
+  //     subTotal: parseFloat(req.body.subtotal),
+  //     administracion: parseFloat(req.body.administracion),
+  //     imprevistos: parseFloat(req.body.imprevistos),
+  //     utilidad: parseFloat(req.body.utilidad),
+  //     ivaSobreUtilidad: parseFloat(req.body.ivaSobreUtilidad),
+  //     total: parseFloat(req.body.total),
+  //     statusSend: status
+  //   },
+  //   $push: { "descriptions": attentionDescription._id },
+  // }, {
+  //   multi: true
+  // }).exec((_, attention) => {
+  //   res.json({ status: 'success', message: "Operación realizada exitosamente", attention })
+  // });
+
+
+
+  console.log(req.files)
+  res.json({ status: 'success', message: "Operación realizada exitosamente", attention: {} })
+  // try {
+  //   await fn.asyncForEach(req.files, async (file) => {
+  //     let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+  //     console.log(fileName);
+  //     let src = await fs.createReadStream(file.path);
+  //     let dest = await fs.createWriteStream('./uploads/' + fileName);
+  //     src.pipe(dest);
+  //     src.on('end', async () => {
+  //       fs.unlinkSync(file.path);
+
+  //       const Jimp = require('jimp');
+  //       const image = await Jimp.read('./uploads/' + fileName);
+  //       await image.resize(400, Jimp.AUTO);
+  //       await image.quality(50);
+  //       await image.writeAsync('./uploads/' + fileName);
+
+  //       schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+  //         $push: { photos: { url: fileName, type: 'remote' } }
+  //       }, {
+  //         upsert: true
+  //       }).exec();
+
+  //       res.json({ status: 'success', url: fileName });
+
+  //     });
+  //     src.on('error', (err) => {
+  //       console.log(err);
+  //       res.json({ status: 'error' });
+  //     });
+  //   });
+
+  // } catch (error) {
+  //   console.log(error);
+  //   res.json({ status: 'error' });
+  // }
+
+  // } catch (error) {
+  //   res.json({ status: 'success', message: "Ocurrió un error al ejecutar la operación" });
+  //  }
 
 
 })
@@ -344,45 +443,53 @@ router.post('/updateMenuRole', async (req, res) => {
 })
 
 router.post('/updatedProject', async (req, res) => {
-  items = await schemas.Item.find({ mode: { $in: ['around'] } });
-  console.log(items);
+  let projects = await schemas.Project.find();
+  await fn.asyncForEach(projects, async project => {
 
-  let aroundItems = [];
-  let outletSampling = [];
-  await fn.asyncForEach(items, async item => {
-    let itemImage = schemas.ItemImage({
-      project: mongoose.Types.ObjectId(req.body.project),
-      item: mongoose.Types.ObjectId(item._id),
-      status: 'activo',
-      photos: [],
-      value: 0.0,
+    items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
+
+    let emergencylights = [];
+    let upsAutonomies = [];
+    await fn.asyncForEach(items, async item => {
+      let itemImage = schemas.ItemImage({
+        project: mongoose.Types.ObjectId(project._id),
+        item: mongoose.Types.ObjectId(item._id),
+        status: 'activo',
+        photos: [],
+        value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: false
+      });
+      await itemImage.save();
+      emergencylights.push(itemImage);
     });
-    await itemImage.save();
-    aroundItems.push(itemImage);
-  });
 
 
-  items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
-  await fn.asyncForEach(items, async item => {
-    let itemImage = schemas.ItemImage({
-      project: mongoose.Types.ObjectId(req.body.project),
-      item: mongoose.Types.ObjectId(item._id),
-      status: 'activo',
-      photos: [],
-      value: 0.0,
+    items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
+    await fn.asyncForEach(items, async item => {
+      let itemImage = schemas.ItemImage({
+        project: mongoose.Types.ObjectId(project._id),
+        item: mongoose.Types.ObjectId(item._id),
+        status: 'activo',
+        photos: [],
+        value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: true
+      });
+      await itemImage.save();
+      upsAutonomies.push(itemImage);
     });
-    await itemImage.save();
-    outletSampling.push(itemImage);
-  });
 
-  schemas.Project.updateOne({ _id: mongoose.Types.ObjectId(req.body.project) }, {
-    $set: { aroundItems: aroundItems, outletSampling: outletSampling }
-  }, {
-    multi: true
-  }).exec();
+    schemas.Project.updateOne({ _id: mongoose.Types.ObjectId(project._id) }, {
+      $set: { emergencylight: emergencylights, upsAutonomy: upsAutonomies }
+    }, {
+      multi: true
+    }).exec();
 
 
-
+  })
   res.json({ status: 'success' });
 })
 
@@ -490,11 +597,14 @@ router.post('/createProject', async (req, res) => {
   try {
     let aroundItems = [];
     let outletSampling = [];
+    let emergencylight = [];
+    let upsAutonomy = [];
 
     let project = new schemas.Project({
       name: req.body.name,
       type: req.body.type,
       observation: req.body.observation,
+      downloaded: false,
       customer: mongoose.Types.ObjectId(req.body.customer)
     });
 
@@ -506,6 +616,9 @@ router.post('/createProject', async (req, res) => {
         status: 'activo',
         photos: [],
         value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: false
       });
       await itemImage.save();
       aroundItems.push(itemImage);
@@ -521,11 +634,50 @@ router.post('/createProject', async (req, res) => {
         status: 'activo',
         photos: [],
         value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: false
       });
       await itemImage.save();
       outletSampling.push(itemImage);
     });
     project.outletSampling = outletSampling;
+
+
+
+    items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
+    await fn.asyncForEach(items, async item => {
+      let itemImage = schemas.ItemImage({
+        project: project._id,
+        item: mongoose.Types.ObjectId(item._id),
+        status: 'activo',
+        photos: [],
+        value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: false
+      });
+      await itemImage.save();
+      emergencylight.push(itemImage);
+    });
+    project.emergencylight = emergencylight;
+
+    items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
+    await fn.asyncForEach(items, async item => {
+      let itemImage = schemas.ItemImage({
+        project: project._id,
+        item: mongoose.Types.ObjectId(item._id),
+        status: 'activo',
+        photos: [],
+        value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: true
+      });
+      await itemImage.save();
+      upsAutonomy.push(itemImage);
+    });
+    project.upsAutonomy = upsAutonomy;
 
 
     project.save();
@@ -617,6 +769,10 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 
 router.post('/createAttention', upload.any("pictures"), async (req, res) => {
 
+  let user = req.decoded;
+  console.log("Ussssser ", user)
+  console.log("Body ", req.body)
+
   try {
     items = await schemas.Item.find({ mode: { $in: ['attention'] } });
 
@@ -627,6 +783,9 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
         photos: [],
         status: 'activo',
         value: 0.0,
+        percentBatery: 0.0,
+        hour: "",
+        hasHour: false
       })
       await attentionImage.save();
       listAttentionImage.push(attentionImage);
@@ -645,6 +804,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
       attentionType: mongoose.Types.ObjectId(req.body.attentionType),
+      centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
       presave: true
     });
     await attention.save();
@@ -985,6 +1145,9 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
         signature: fileNameSign,
         names: req.body.name,
         document: req.body.document,
+        price: parseFloat(req.body.price),
+        attentionType: mongoose.Types.ObjectId(req.body.attentionType),
+        centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
       }
     }, {
       upsert: true
@@ -998,7 +1161,25 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
   }
 });
 
-router.post('/updateImageAround', upload.any("pictures"), async (req, res) => {
+router.post('/updateAutomyValue', async (req, res) => {
+
+  console.log(req.body)
+  if (req.body.id && req.body.value) {
+    let hour = moment(new Date()).format('D-MMMM-YYYY, h:mm:ss a');
+    let { id, value } = req.body;
+    schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+      $set: {
+        percentBatery: parseFloat(value),
+        hour: hour.toString()
+      }
+    }, {
+      upsert: true
+    }).exec();
+  }
+  res.json({ status: 'success' });
+
+})
+router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
   console.log(req.body)
   console.log(req.files)
   try {
@@ -1038,48 +1219,48 @@ router.post('/updateImageAround', upload.any("pictures"), async (req, res) => {
   }
 });
 
-router.post('/updateImageOutletSampling', upload.any("pictures"), async (req, res) => {
+// router.post('/updateImageOutletSampling', upload.any("pictures"), async (req, res) => {
 
-  console.log(req.body);
-  console.log(req.files);
-  try {
+//   console.log(req.body);
+//   console.log(req.files);
+//   try {
 
-    if (req.files) {
-      await fn.asyncForEach(req.files, async (file) => {
-        let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-        let src = await fs.createReadStream(file.path);
-        let dest = await fs.createWriteStream('./uploads/' + fileName);
-        src.pipe(dest);
-        src.on('end', async () => {
-          console.log('end');
-          fs.unlinkSync(file.path);
+//     if (req.files) {
+//       await fn.asyncForEach(req.files, async (file) => {
+//         let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+//         let src = await fs.createReadStream(file.path);
+//         let dest = await fs.createWriteStream('./uploads/' + fileName);
+//         src.pipe(dest);
+//         src.on('end', async () => {
+//           console.log('end');
+//           fs.unlinkSync(file.path);
 
-          const Jimp = require('jimp');
-          const image = await Jimp.read('./uploads/' + fileName);
-          await image.resize(400, Jimp.AUTO);
-          await image.quality(50);
-          await image.writeAsync('./uploads/' + fileName);
-        });
-        src.on('error', (err) => {
-          console.log(err)
-        });
-        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-          $push: {
-            photos: { url: fileName, type: 'remote' },
-          }
-        }, {
-          upsert: true
-        }).exec();
+//           const Jimp = require('jimp');
+//           const image = await Jimp.read('./uploads/' + fileName);
+//           await image.resize(400, Jimp.AUTO);
+//           await image.quality(50);
+//           await image.writeAsync('./uploads/' + fileName);
+//         });
+//         src.on('error', (err) => {
+//           console.log(err)
+//         });
+//         schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+//           $push: {
+//             photos: { url: fileName, type: 'remote' },
+//           }
+//         }, {
+//           upsert: true
+//         }).exec();
 
-        res.json({ status: 'success', url: fileName });
-      });
-    }
+//         res.json({ status: 'success', url: fileName });
+//       });
+//     }
 
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error' });
-  }
-});
+//   } catch (error) {
+//     console.log(error)
+//     res.json({ status: 'error' });
+//   }
+// });
 
 router.post('/updateImageAttention', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
@@ -1428,12 +1609,9 @@ router.post('/restoreUser', async (req, res) => {
 /** Center of Attentions */
 router.post('/listCenterOfAttention', async (req, res) => {
 
-
-  let { start, end, paginate, customer } = req.body;
+  let { start, end, paginate, customer, encargado, user } = req.body;
 
   console.log(req.body);
-
-  console.log(start, end);
 
   let queryCount = schemas.CenterOfAttention.countDocuments();
 
@@ -1445,6 +1623,9 @@ router.post('/listCenterOfAttention', async (req, res) => {
     query.where('customer').equals(mongoose.Types.ObjectId(customer))
     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
 
+  }
+  if (encargado && user) {
+    query.where("ofset").equals(mongoose.Types.ObjectId(user))
   }
   if (paginate) {
     query.skip(start)
@@ -1513,7 +1694,7 @@ router.post('/createCenterOfAttention', async (req, res) => {
         username: req.body.username,
         email: req.body.email,
         document_number: '',
-        role: mongoose.Types.ObjectId('5a046fe9627e3526802b3848'),
+        role: mongoose.Types.ObjectId('627d968a96a6a6b76f30c7e9'),
         photo: 'default.png',
         password: req.body.password,
         status: 'activo'
@@ -1846,25 +2027,27 @@ router.post('/sendReportProject', async (req, res) => {
       pathServicePhp: config.pathSavePdf
     }
 
-    // console.log('*****************************************************************');
-    // console.log(JSON.stringify(data, null, 6))
-    // console.log('*****************************************************************');
-
     if (fs.existsSync(`./pdf/${project._id}.pdf`)) {
       fs.unlinkSync(`./pdf/${project._id}.pdf`);
     }
 
-
     axios.post(config.pathServicePhp + 'project.php', data)
       .then(async (response) => {
 
-        var url = "";
         console.log(response.data)
         if (req.body.type == "email")
           await fn.sendEmailProject(response.data.data.id);
         // else {
         //   url = fs.readFileSync(`./pdf/${project._id}.pdf`, { encoding: 'base64' });
         // }
+
+        schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(project._id) }, {
+          $set: {
+            downloaded: true
+          }
+        }, {
+          multi: true
+        }).exec();
 
         res.json({
           status: 'success',
@@ -1921,31 +2104,6 @@ router.post('/finishAttention', async (req, res) => {
         }).populate({
           path: 'attentionItems'
         }).exec();
-
-      // let newPhotosBefore = attention.attentionItems.map(element => {
-      //   if (element.length == 0) {
-      //     element = [{
-      //       url: 'default.png',
-      //       type: 'remote'
-      //     }]
-      //   }
-      //   return element;
-      // });
-      // attention.photos_before = newPhotosBefore;
-
-      // let newPhotosAfter = attention.photos_after.map(element => {
-      //   if (element.length == 0) {
-      //     element = [{
-      //       url: 'default.png',
-      //       type: 'remote'
-      //     }]
-      //   }
-      //   return element;
-      // });
-      // attention.photos_after = newPhotosAfter;
-
-
-
       let data = {
         date: fn.getDateReport(),
         attention: attention,
@@ -1956,7 +2114,7 @@ router.post('/finishAttention', async (req, res) => {
         .then(async (response) => {
 
           console.log(response.data)
-          await fn.sendEmailAttention(attention._id);
+          // await fn.sendEmailAttention(attention._id);
 
           res.json({
             status: 'success',
@@ -2288,6 +2446,8 @@ router.post('/reportAttention', async (req, res) => {
   }).populate({
     path: 'attentionType',
   }).populate({
+    path: 'centerOfAttention',
+  }).populate({
     path: 'descriptions',
     populate: [{
       path: "customer"
@@ -2298,12 +2458,16 @@ router.post('/reportAttention', async (req, res) => {
     query.where('customer').equals(mongoose.Types.ObjectId(customer))
     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
   }
-  // if (centerOfAttention)
-  //   query.where('typeService').equals(type)
-  // if (serviceType)
-  //   query.where('serviceType').equals(type)
-  // if (serviceStatus)
-  //   query.where('serviceStatus').equals(type)
+  if (centerOfAttention)
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention))
+
+  if (serviceType && serviceType != "1")
+    query.where('attentionType').equals(serviceType)
+
+  if (serviceStatus)
+    query.where('statusSend').equals(mongoose.Types.ObjectId(serviceStatus))
+
+
   if (startDate && endDate) {
     let partsStartDate = startDate.split('T')
     let partsEndDate = endDate.split('T')
@@ -2314,9 +2478,84 @@ router.post('/reportAttention', async (req, res) => {
     query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
     queryCount.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
   }
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
   let attentions = await query.exec();
   let count = await queryCount.exec();
+
+
+
   res.json({ status: 'success', attentions, count });
+});
+
+router.post('/printReportAttention', async (req, res) => {
+
+  let { startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
+
+  let query = schemas.Attention.find().populate({
+    path: 'attentionItems',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'customer',
+  }).populate({
+    path: 'attentionType',
+  }).populate({
+    path: 'centerOfAttention',
+  }).populate({
+    path: 'descriptions',
+    populate: [{
+      path: "customer"
+    }]
+  });
+
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer))
+  }
+  if (centerOfAttention)
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention))
+
+  if (serviceType && serviceType != "1")
+    query.where('attentionType').equals(serviceType)
+
+  if (serviceStatus)
+    query.where('statusSend').equals(mongoose.Types.ObjectId(serviceStatus))
+
+
+  if (startDate && endDate) {
+    let partsStartDate = startDate.split('T')
+    let partsEndDate = endDate.split('T')
+    query.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
+  } else if (startDate) {
+    let partsStartDate = startDate.split('T')
+    query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
+  }
+
+  let attentions = await query.exec();
+  let data = {
+    attentions: attentions,
+    total: 1000,
+  }
+
+  // console.log(JSON.stringify(data, null, 6))
+
+  axios.post(`${config.jsReportClient}reports`, {
+    shortid: 'HklnmnRtb9',
+    data
+  }).then(function (response) {
+    console.log(response.data);
+    res.json({
+      status: 'success',
+      data: response.data,
+      message: 'Documento generado exitosamente'
+    });
+
+  }).catch(function (error) {
+    console.log("error", error);
+  })
 });
 
 module.exports = router;
