@@ -783,6 +783,10 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
 
     });
 
+    let centerOfAttention = null;
+    if (req.body.centerOfAttention) {
+      centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
+    }
 
     let attention = new schemas.Attention({
       attentionItems: listAttentionImage,
@@ -796,7 +800,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
       attentionType: mongoose.Types.ObjectId(req.body.attentionType),
-      centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
+      centerOfAttention: centerOfAttention,
       presave: true
     });
     await attention.save();
