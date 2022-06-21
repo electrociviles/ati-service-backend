@@ -206,7 +206,7 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     description: String,
     status: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    ofset: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    oset: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     maintenanceCost: mongoose.Schema.Types.Double,
     expirationDateMaintenance: Date,
     statusExpirationDateMaintenance: String,

@@ -1633,7 +1633,7 @@ router.post('/listCenterOfAttention', async (req, res) => {
 
   }
   if (encargado && user) {
-    query.where("ofset").equals(mongoose.Types.ObjectId(user))
+    query.where("oset").equals(mongoose.Types.ObjectId(user))
   }
   if (paginate) {
     query.skip(start)
@@ -1684,6 +1684,19 @@ router.post('/createCenterOfAttention', async (req, res) => {
   if (!centerOfAttention) {
 
     try {
+      let user = schemas.User({
+        name: req.body.name,
+        username: req.body.username,
+        email: req.body.email,
+        document_number: '',
+        role: mongoose.Types.ObjectId('627d968a96a6a6b76f30c7e9'),
+        photo: 'default.png',
+        password: req.body.password,
+        status: 'activo',
+        customer: mongoose.Types.ObjectId(req.body.customer),
+      });
+      await user.save();
+
       let centerOfAttention = schemas.CenterOfAttention({
         title: req.body.name,
         description: req.body.description,
@@ -1693,21 +1706,12 @@ router.post('/createCenterOfAttention', async (req, res) => {
         statusProvisioningAlertDate: 'pending',
         statusAlertDateMaintenance: 'pending',
         customer: mongoose.Types.ObjectId(req.body.customer),
+        oset: mongoose.Types.ObjectId(user._id),
         status: 'active',
       });
       await centerOfAttention.save();
 
-      let user = schemas.User({
-        name: req.body.name,
-        username: req.body.username,
-        email: req.body.email,
-        document_number: '',
-        role: mongoose.Types.ObjectId('627d968a96a6a6b76f30c7e9'),
-        photo: 'default.png',
-        password: req.body.password,
-        status: 'activo'
-      });
-      await user.save();
+
 
       let id = centerOfAttention._id;
 

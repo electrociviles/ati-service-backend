@@ -268,7 +268,7 @@ const semiAnnualMaintenance = () => {
                 // remainingprovisioningAlertDays: 254
 
                 // Contabilidad usuario de toda tienda
-                // 1 un mes antes de vencer el mantenimiento se le envia un correo al ofset de cadata tienda 
+                // 1 un mes antes de vencer el mantenimiento se le envia un correo al oset de cadata tienda 
                 // informandole que debe aprovisonar 6.000.000 de pesos
                 asyncForEach(configurations, async (configuration) => {
 
