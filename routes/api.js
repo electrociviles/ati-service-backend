@@ -233,6 +233,8 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/listCustomers', async (req, res) => {
 
+  console.log("*********************************************************************************");
+  console.log(req.body);
   let { start, end, paginate, search, encargado, user, customer } = req.body;
 
   var query = schemas.User.find({ role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848") }).select();
