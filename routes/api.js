@@ -247,7 +247,7 @@ router.post('/listCustomers', async (req, res) => {
     query.where('name').equals(new RegExp(search, "i"));
   }
   if (customer) {
-    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+    query.where('_id').equals(mongoose.Types.ObjectId(customer));
   }
   if (paginate) {
     query.skip(start)
