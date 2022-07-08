@@ -705,6 +705,7 @@ router.post('/createBoard', async (req, res) => {
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
+        percentBatery: 0.0,
         value: 0.0,
 
       });
