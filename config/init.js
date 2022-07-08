@@ -85,7 +85,7 @@ exports.UpdateProjectSetNewItems = async function () {
                 value: 0.0,
             });
             await itemImage.save();
-            emergencylight.push(itemImage);
+            // emergencylight.push(itemImage);
         });
         project.emergencylight = emergencylight;
 
@@ -101,7 +101,7 @@ exports.UpdateProjectSetNewItems = async function () {
                 hour: ""
             });
             await itemImage.save();
-            upsAutonomy.push(itemImage);
+            // upsAutonomy.push(itemImage);
         });
         project.upsAutonomy = upsAutonomy;
 
