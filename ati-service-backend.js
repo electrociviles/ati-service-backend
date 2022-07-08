@@ -59,7 +59,7 @@ app.listen(config.port, function () {
   // init.createUser();
   // init.createCustomer();
   // init.createProject();
-  init.createRole();
+  // init.createRole();
   // init.createMenuWeb();
   // init.createMenuMobile();
   // init.createConfiguration();
