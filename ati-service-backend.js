@@ -65,7 +65,8 @@ app.listen(config.port, function () {
   // init.createConfiguration();
   // init.createAttentionType()
   // init.updateCustomerToUsers()
-  // init.NewItem();
+  // init.UpdateProjectSetNewItems();
+  init.NewItem();
   // init.createRequestType();
 
 });
