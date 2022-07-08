@@ -1031,6 +1031,16 @@ exports.createRole = function () {
     })
     list.push(role)
 
+    var list = new Array()
+    var role = new schemas.Role({
+        // _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3847'),
+        tag: "ati",
+        name: "Técnico",
+        administrative: true,
+        status: 'active',
+    })
+    list.push(role)
+
     var role = new schemas.Role({
         _id: mongoose.Types.ObjectId('62b790f10f44460f0c2922e2'),
         name: "Responsable de obra",
