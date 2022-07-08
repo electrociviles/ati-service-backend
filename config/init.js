@@ -1031,9 +1031,8 @@ exports.createRole = function () {
     })
     list.push(role)
 
-    var list = new Array()
     var role = new schemas.Role({
-        // _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3847'),
+        _id: mongoose.Types.ObjectId('62c82ad211bb482f497b3f11'),
         tag: "ati",
         name: "Técnico",
         administrative: true,
