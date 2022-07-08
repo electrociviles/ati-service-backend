@@ -21,6 +21,7 @@ router.post('/', (req, res, next) => {
 router.post('/login', async (req, res, next) => {
 
   let user = await schemas.User.findOne({ 'username': req.body.username })
+    .populate({ path: "role" })
   if (user) {
     let result = bcrypt.compareSync(req.body.password, user.password);
     let token = fn.createToken(user, process.env.SECRET, "100hr");
@@ -36,8 +37,10 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/getMenuByRole', async (req, res) => {
 
+  let { role, type } = req.body;
+
   var list = []
-  let menus = await schemas.Menu.find().populate({
+  let menus = await schemas.Menu.findOne({ type }).populate({
     path: 'pages',
     populate: [{
       path: "roles",
@@ -47,16 +50,18 @@ router.post('/getMenuByRole', async (req, res) => {
     }]
   })
 
-  let role = req.body.role;
 
-  for (let i = 0; i < menus[0].pages.length; i++) {
-    if (menus[0].pages[i].roles.includes(role)) {
-      let children = fn.getChildrens(role, menus[0].pages[i])
+  for (let i = 0; i < menus.pages.length; i++) {
+    if (menus.pages[i].roles.includes(role)) {
+      let children = fn.getChildrens(role, menus.pages[i])
       var obj =
       {
-        title: menus[0].pages[i].title,
-        href: menus[0].pages[i].href,
-        icon: menus[0].pages[i].icon,
+        title: menus.pages[i].title,
+        href: menus.pages[i].href,
+        icon: menus.pages[i].icon,
+        backgroundColor: menus.pages[i].backgroundColor,
+        iconColor: menus.pages[i].iconColor,
+        textColor: menus.pages[i].textColor,
         children: children
       }
       list.push(obj)
@@ -72,8 +77,8 @@ router.post('/getMenuByRole', async (req, res) => {
 
 router.post('/getMenu', async (req, res) => {
 
-  var list = []
-  let menus = await schemas.Menu.find().populate({
+  let { type } = req.body
+  let menus = await schemas.Menu.findOne({ type }).populate({
     path: 'pages',
     populate: [{
       path: "roles",
@@ -222,7 +227,6 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
 });
 
 router.post('/getAttention', async (req, res) => {
-  console.log('e ', req.body);
 
   let attention = await schemas.Attention.findById(mongoose.Types.ObjectId(req.body.attention)).populate({
     path: 'customer',
@@ -231,24 +235,168 @@ router.post('/getAttention', async (req, res) => {
   res.json({ status: 'success', attention });
 });
 
+router.post('/requestTypes', async (req, res) => {
+
+  let requestTypes = await schemas.RequestType.find().exec();
+  res.json({ status: 'success', requestTypes });
+});
+router.post('/createRequest', upload.any("files"), authMiddleware, async (req, res) => {
+
+  console.log(req.body)
+  let currentUser = await schemas.User.findById(req.decoded.id);
+
+
+  let { description, requestType, centerOfAttention, customer } = req.body;
+  if (req.body.centerOfAttention) {
+    centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
+  } else {
+    centerOfAttention = null;
+  }
+  let incomeCustomer = null;
+  if (customer) {
+    incomeCustomer = mongoose.Types.ObjectId(customer);
+  } else {
+    incomeCustomer: mongoose.Types.ObjectId(currentUser.customer);
+  }
+
+  var requestDescription = schemas.RequestDescription({
+    description: "Enviado",
+    status: "created",
+    date: new Date(),
+    user: mongoose.Types.ObjectId(req.decoded.id),
+    customer: incomeCustomer,
+    user: mongoose.Types.ObjectId(req.decoded.id),
+  })
+  requestDescription.save();
+
+  try {
+    let request = new schemas.Request({
+      description,
+      request_type: mongoose.Types.ObjectId(requestType),
+      centerOfAttention,
+      date: new Date(),
+      status: "created",
+      user: mongoose.Types.ObjectId(req.decoded.id),
+      descriptions: [requestDescription._id]
+    });
+    console.log(request)
+    await request.save();
+
+    request = await schemas.Request.findById(request._id)
+      .populate("request_type")
+      .populate("user")
+      .populate("centerOfAttention")
+
+
+    res.json({ status: 'success', request, message: "Solicitud registrada exitosamente" });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+
+  }
+});
+
+router.post('/getRequest', upload.any("files"), authMiddleware, async (req, res) => {
+  try {
+    let request = await schemas.Request.findById(req.body.id)
+      .populate("request_type")
+      .populate("user")
+      .populate("centerOfAttention")
+
+    res.json({ status: 'success', request, message: "Success" });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+
+  }
+});
+
+router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, res) => {
+
+  let { id, observation, requestType } = req.body;
+  console.log(req.body)
+
+  let request = await schemas.Request.findById(mongoose.Types.ObjectId(id));
+
+  if (request.status == "created") {
+    if (req.body.centerOfAttention) {
+      centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
+    } else {
+      centerOfAttention = null;
+    }
+
+    schemas.Request.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+      $set: {
+        description: observation,
+        request_type: mongoose.Types.ObjectId(requestType),
+        centerOfAttention,
+      }
+    }, {
+      upsert: true
+    }).exec();
+    res.json({ status: 'success', message: "Solicitud actualizada exitosamente" })
+
+  } else {
+    res.json({ status: 'error', message: "No se puede actualizar la solicitud porque no se encuentra abierta" })
+  }
+})
+router.post('/listRequests', authMiddleware, async (req, res) => {
+  let allowedRole = true;
+  let currentUser = await schemas.User.findById(req.decoded.id);
+
+  let query = await schemas.Request.find()
+    .populate("request_type")
+    .populate("user")
+    .populate("centerOfAttention")
+
+  switch (req.decoded.role.tag) {
+    case "administrator":
+
+      break;
+    case "construction_manager":
+    case "maintenance_manager":
+      query.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      queryCount.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      break;
+    case "oset":
+    case "permanent":
+      query.where('user').equals(mongoose.Types.ObjectId(currentUser._id))
+      queryCount.where('user').equals(mongoose.Types.ObjectId(currentUser._id))
+      break;
+    default:
+      allowedRole = false;
+
+  }
+  if (!allowedRole)
+    res.json({ status: 'success', requests: [], message: "Success" });
+  else {
+    let requests = await query.exec();
+    res.json({ status: 'success', requests, message: "Success" });
+  }
+})
+
+
 router.post('/listCustomers', async (req, res) => {
 
-  console.log("*********************************************************************************");
-  console.log(req.body);
+
   let { start, end, paginate, search, encargado, user, customer } = req.body;
 
-  var query = schemas.User.find({ role: mongoose.Types.ObjectId("5a046fe9627e3526802b3848") }).select();
+  var query = schemas.Customer.find().select();
 
-  if (encargado && user) {
-    let usrEncargado = await schemas.User.findById(mongoose.Types.ObjectId(user));
-    query.where('_id').equals(mongoose.Types.ObjectId(usrEncargado.customer));
-  }
-  if (search) {
-    query.where('name').equals(new RegExp(search, "i"));
-  }
-  if (customer) {
-    query.where('_id').equals(mongoose.Types.ObjectId(customer));
-  }
+  // if (encargado && user) {}}
+  //   let usrEncargado = await schemas.User.findById(mongoose.Types.ObjectId(user));
+  //   query.where('_id').equals(mongoose.Types.ObjectId(usrEncargado.customer));
+  // }
+  // if (search) {
+  //   query.where('name').equals(new RegExp(search, "i"));
+  // }
+  // if (customer) {
+  //   query.where('_id').equals(mongoose.Types.ObjectId(customer));
+  // }
+  query.populate({
+    path: "users",
+    populate: [{ path: "role" }]
+  })
   if (paginate) {
     query.skip(start)
       .limit(end);
@@ -330,7 +478,7 @@ router.post('/updateAdditionalInformationAttention', upload.any("files"), authMi
       description: text,
       statusSend: status,
       date: new Date(),
-      customer: mongoose.Types.ObjectId(req.decoded.id),
+      user: mongoose.Types.ObjectId(req.decoded.id),
     });
 
     attentionDescription.save();
@@ -423,15 +571,60 @@ router.post('/confirmRejectAttentionCustomer', authMiddleware, async (req, res) 
 
 })
 
+router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
+  try {
+    console.log(req.body);
+    console.log(req.decoded);
+    let { statusRequest, description, id } = req.body
+
+
+    var requestDescription = schemas.RequestDescription({
+      description,
+      statu: statusRequest,
+      date: new Date(),
+      user: mongoose.Types.ObjectId(req.decoded.id),
+    })
+    requestDescription.save();
+
+    schemas.Request.updateOne({ _id: mongoose.Types.ObjectId(id) }, {
+      $set: {
+        status: statusRequest,
+      },
+      $push: { "descriptions": requestDescription._id },
+    }, {
+      multi: true
+    }).exec();
+
+    let textMessage = 'aceptada';
+    if (statusRequest == 'reject')
+      textMessage = "Rechazada";
+
+    let message = `Solicitud ${textMessage} exitsamente`;
+
+    res.json({ status: 'success', message });
+  } catch (error) {
+    res.json({ status: 'success', message: error });
+
+  }
+
+})
 router.post('/updateMenuRole', async (req, res) => {
 
   let { status, idpage, idrole } = req.body;
 
   if (status) {
-    await schemas.Page.findByIdAndUpdate(idpage, { $push: { "roles": idrole } }, { safe: true, upsert: true }).exec()
+    schemas.Page.updateOne({ "_id": mongoose.Types.ObjectId(idpage) }, {
+      $push: { roles: idrole }
+    }, {
+      multi: true
+    }).exec();
   }
   else {
-    await schemas.Page.findByIdAndUpdate(idpage, { $pull: { "roles": idrole } }, { safe: true, upsert: true }).exec()
+    schemas.Page.updateOne({ "_id": mongoose.Types.ObjectId(idpage) }, {
+      $pull: { roles: idrole }
+    }, {
+      multi: true
+    }).exec();
   }
 
   res.json({ status: 'success' });
@@ -513,6 +706,7 @@ router.post('/createBoard', async (req, res) => {
         status: 'activo',
         photos: [],
         value: 0.0,
+
       });
       await itemBoard.save();
       itemsBoards.push(itemBoard);
@@ -537,8 +731,10 @@ router.post('/createBoard', async (req, res) => {
 
 router.post('/getItemBoard', async (req, res) => {
 
+  console.log("-------------------------------------------------")
   console.log(req.body);
   let completed = await fn.verifyItemBoard(req.body.board);
+  console.log("completed ", completed)
   items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),).populate({
     path: 'itemsBoards',
     match: { status: "activo" },
@@ -766,8 +962,6 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 router.post('/createAttention', upload.any("pictures"), async (req, res) => {
 
   let user = req.decoded;
-  console.log("Ussssser ", user)
-  console.log("Body ", req.body)
 
   try {
     items = await schemas.Item.find({ mode: { $in: ['attention'] } });
@@ -1187,6 +1381,24 @@ router.post('/updateAutomyValue', async (req, res) => {
   res.json({ status: 'success' });
 
 })
+
+router.post('/updateValue', async (req, res) => {
+
+  console.log(req.body)
+  if (req.body.id && req.body.value) {
+    let { id, value } = req.body;
+    schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+      $set: {
+        value: parseFloat(value),
+      }
+    }, {
+      upsert: true
+    }).exec();
+  }
+  res.json({ status: 'success' });
+
+})
+
 router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
   console.log(req.body)
   console.log(req.files)
@@ -1226,50 +1438,6 @@ router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
     res.json({ status: 'error' });
   }
 });
-
-// router.post('/updateImageOutletSampling', upload.any("pictures"), async (req, res) => {
-
-//   console.log(req.body);
-//   console.log(req.files);
-//   try {
-
-//     if (req.files) {
-//       await fn.asyncForEach(req.files, async (file) => {
-//         let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-//         let src = await fs.createReadStream(file.path);
-//         let dest = await fs.createWriteStream('./uploads/' + fileName);
-//         src.pipe(dest);
-//         src.on('end', async () => {
-//           console.log('end');
-//           fs.unlinkSync(file.path);
-
-//           const Jimp = require('jimp');
-//           const image = await Jimp.read('./uploads/' + fileName);
-//           await image.resize(400, Jimp.AUTO);
-//           await image.quality(50);
-//           await image.writeAsync('./uploads/' + fileName);
-//         });
-//         src.on('error', (err) => {
-//           console.log(err)
-//         });
-//         schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-//           $push: {
-//             photos: { url: fileName, type: 'remote' },
-//           }
-//         }, {
-//           upsert: true
-//         }).exec();
-
-//         res.json({ status: 'success', url: fileName });
-//       });
-//     }
-
-//   } catch (error) {
-//     console.log(error)
-//     res.json({ status: 'error' });
-//   }
-// });
-
 router.post('/updateImageAttention', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
   console.log(req.files);
@@ -1415,7 +1583,7 @@ router.post('/listUsers', async (req, res) => {
   console.log(req.body);
 
   let query = schemas.User.find()
-    .sort({ '_id': 1 })
+    .sort({ '_id': -1 })
     .populate('role')
 
   if (paginate) {
@@ -1556,6 +1724,15 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
       // const salt = await bcrypt.genSalt(10);
       // let password = await bcrypt.hash(req.body.password, salt);
 
+
+      let customer = null
+      if (req.body.customer) {
+        customer = mongoose.Types.ObjectId(req.body.customer);
+      }
+      let centerOfAttention = null
+      if (req.body.centerOfAttention) {
+        centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
+      }
       let user = schemas.User({
         name: req.body.name,
         username: req.body.username,
@@ -1563,9 +1740,26 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
         role: req.body.role,
         photo: fileName,
         password: req.body.password,
+        customer,
+        centerOfAttention,
         status: 'activo'
       });
       await user.save()
+
+      if (customer) {
+        schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(req.body.customer) }, {
+          $push: { users: user },
+        }, {
+          multi: true
+        }).exec();
+      }
+      if (centerOfAttention) {
+        schemas.CenterOfAttention.updateOne({ "_id": centerOfAttention }, {
+          $push: { users: user },
+        }, {
+          multi: true
+        }).exec();
+      }
 
       res.json({ status: 'success' });
 
@@ -1615,37 +1809,68 @@ router.post('/restoreUser', async (req, res) => {
 });
 
 /** Center of Attentions */
-router.post('/listCenterOfAttention', async (req, res) => {
+router.post('/listCenterOfAttention', authMiddleware, async (req, res) => {
 
-  let { start, end, paginate, customer, encargado, user } = req.body;
+  let { start, end, paginate, customer } = req.body;
 
-  console.log(req.body);
+  console.log("----------------------------------------")
+  console.log(req.body)
+  console.log(req.decoded)
 
+  console.log("----------------------------------------")
+
+  let currentUser = await schemas.User.findById(req.decoded.id);
   let queryCount = schemas.CenterOfAttention.countDocuments();
-
   let query = schemas.CenterOfAttention.find()
     .sort({ '_id': 1 })
     .populate({ path: 'customer' })
 
+  allowedRole = true;
+
+  console.log("....................")
+  console.log(currentUser)
+
+  switch (req.decoded.role.tag) {
+    case "administrator":
+
+      break;
+    case "construction_manager":
+    case "maintenance_manager":
+      query.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      queryCount.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      break;
+    case "oset":
+    case "permanent":
+      query.where('users').in([mongoose.Types.ObjectId(currentUser._id)])
+      queryCount.where('users').in([mongoose.Types.ObjectId(currentUser._id)])
+      break;
+    default:
+      allowedRole = false;
+
+  }
   if (customer) {
     query.where('customer').equals(mongoose.Types.ObjectId(customer))
     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
-
   }
-  if (encargado && user) {
-    query.where("oset").equals(mongoose.Types.ObjectId(user))
-  }
-  if (paginate) {
-    query.skip(start)
-      .limit(end);
-  }
-  let count = await queryCount.exec();
-
-  return new Promise((resolve, reject) => {
-    query.exec(function (_, centersOfAttention) {
-      res.json({ status: 'success', centersOfAttention, count })
-    })
+  query.populate({
+    path: "users",
+    populate: [{ path: "role" }]
   })
+  if (allowedRole) {
+    if (paginate) {
+      query.skip(start)
+        .limit(end);
+    }
+    let count = await queryCount.exec();
+
+    return new Promise((resolve, reject) => {
+      query.exec(function (_, centersOfAttention) {
+        res.json({ status: 'success', centersOfAttention, count })
+      })
+    })
+  } else {
+    res.json({ status: 'success', centersOfAttention: [], count: 0 })
+  }
 });
 
 router.post('/updateCenterOfAttention', upload.any("photo"), async (req, res) => {
@@ -1684,18 +1909,6 @@ router.post('/createCenterOfAttention', async (req, res) => {
   if (!centerOfAttention) {
 
     try {
-      let user = schemas.User({
-        name: req.body.name,
-        username: req.body.username,
-        email: req.body.email,
-        document_number: '',
-        role: mongoose.Types.ObjectId('627d968a96a6a6b76f30c7e9'),
-        photo: 'default.png',
-        password: req.body.password,
-        status: 'activo',
-        customer: mongoose.Types.ObjectId(req.body.customer),
-      });
-      await user.save();
 
       let centerOfAttention = schemas.CenterOfAttention({
         title: req.body.name,
@@ -1706,12 +1919,15 @@ router.post('/createCenterOfAttention', async (req, res) => {
         statusProvisioningAlertDate: 'pending',
         statusAlertDateMaintenance: 'pending',
         customer: mongoose.Types.ObjectId(req.body.customer),
-        oset: mongoose.Types.ObjectId(user._id),
         status: 'active',
       });
       await centerOfAttention.save();
 
-
+      schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(req.body.customer) }, {
+        $push: { centersOfAttention: centerOfAttention },
+      }, {
+        multi: true
+      }).exec();
 
       let id = centerOfAttention._id;
 
@@ -2413,20 +2629,21 @@ router.post('/updateRole', async (req, res) => {
 
 router.post('/listNotifications', authMiddleware, async (req, res) => {
 
+  console.log("----------------- listNotifications -------------------")
   console.log(req.body);
+
   console.log(req.decoded);
 
-  let rolesAllowed = ["5a046fe9627e3526802b3848"];
+  let rolesAllowed = ["5a046fe9627e3526802b3848", "5a046fe9627e3526802b3847"];
   let notifications = [];
-  if (rolesAllowed.includes(req.body.role)) {
-    items = await schemas.Item.find({ mode: { $in: ['finding'] }, })
+  if (rolesAllowed.includes(req.decoded.role)) {
 
     attentionPending = await schemas.Attention.find({ statusSend: { $in: ['send', 'resend'] }, customer: req.decoded.id })
     attentionPending.map(attention => {
       let status = '';
       switch (attention.statusSend) {
         case "send":
-          status = "Envida";
+          status = "Enviada";
           break;
         case "resend":
           status = "Reenviada";
@@ -2440,6 +2657,20 @@ router.post('/listNotifications', authMiddleware, async (req, res) => {
         type: 'feature',
         status,
         title: `Atención ${attention.description} Pendiente por Aprobar`
+      }
+      notifications.push(notification)
+    })
+
+    requests = await schemas.Request.find({ status: { $in: ['created', 'reject'] } })
+    requests.map(request => {
+
+      let notification = {
+        id: request._id,
+        _id: request._id,
+        created_at: Date(),
+        type: 'requests',
+        status: "Creado",
+        title: `Solicitud ${request.description} Pendiente por Aprobar`
       }
       notifications.push(notification)
     })

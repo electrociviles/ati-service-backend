@@ -1023,28 +1023,51 @@ exports.createRole = function () {
     var list = new Array()
     var role = new schemas.Role({
         _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3847'),
+        tag: "administrator",
         name: "Administrador",
         administrative: true,
-        status: 'active'
+        status: 'active',
     })
     list.push(role)
 
     var role = new schemas.Role({
-        _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3848'),
-        name: "Cliente",
-        administrative: false,
-        status: 'active'
+        _id: mongoose.Types.ObjectId('62b790f10f44460f0c2922e2'),
+        name: "Responsable de obra",
+        tag: "construction_manager",
+        administrative: true,
+        status: 'active',
+    })
+    list.push(role)
+
+    var role = new schemas.Role({
+        _id: mongoose.Types.ObjectId('62b790f10f44460f0c2922e3'),
+        name: "Responble de mantenimiento",
+        tag: "maintenance_manager",
+        administrative: true,
+        status: 'active',
     })
     list.push(role)
 
 
     var role = new schemas.Role({
-        _id: mongoose.Types.ObjectId('5a046fe9627e3526802b3849'),
-        name: "Proveedor",
-        administrative: false,
-        status: 'active'
+        _id: mongoose.Types.ObjectId('62b790f10f44460f0c2922e5'),
+        name: "Permanentes",
+        tag: "permanent",
+        administrative: true,
+        status: 'active',
     })
     list.push(role)
+
+    var role = new schemas.Role({
+        _id: mongoose.Types.ObjectId('62b790f10f44460f0c2922e6'),
+        name: "Oset",
+        tag: "oset",
+        administrative: true,
+        status: 'active',
+    })
+    list.push(role)
+
+
     schemas.Role.insertMany(list, function () { });
 
 }
@@ -1069,9 +1092,10 @@ exports.createConfiguration = function () {
 
     schemas.Configuration.insertMany(list, function () { });
 }
-exports.createMenu = () => {
+exports.createMenuWeb = () => {
 
     var menu = new schemas.Menu({
+        type: 'web',
         title: '',
         pages: []
     })
@@ -1148,6 +1172,8 @@ exports.createMenu = () => {
         roles: ['5a046fe9627e3526802b3847']
     })
     listPage.push(reports)
+    menu.pages.push(reports)
+
 
     var reports01 = new schemas.Page({
         title: 'Atenciones',
@@ -1157,9 +1183,29 @@ exports.createMenu = () => {
         roles: ['5a046fe9627e3526802b3847']
     })
     listPage.push(reports01)
-    menu.pages.push(reports)
+
+    var reports02 = new schemas.Page({
+        title: 'Solicitudes',
+        href: '/reports/requests',
+        icon: 'TbReportSearch',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(reports02)
+
+    var reports03 = new schemas.Page({
+        title: 'Mantenimientos',
+        href: '/reports/maintenances',
+        icon: 'HiDocumentReport',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(reports03)
 
     reports.children.push(reports01._id)
+    reports.children.push(reports02._id)
+    reports.children.push(reports03._id)
+
 
     /** Ajustes */
     var pageAjustes = new schemas.Page({
@@ -1181,6 +1227,15 @@ exports.createMenu = () => {
         roles: ['5a046fe9627e3526802b3847']
     })
     listPage.push(usuarios)
+
+    var clientes = new schemas.Page({
+        title: 'Clientes',
+        href: '/customers',
+        icon: 'RiUserSettingsLine',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(clientes)
 
     //Roles
     var roles = new schemas.Page({
@@ -1212,10 +1267,120 @@ exports.createMenu = () => {
     listPage.push(values)
 
     pageAjustes.children.push(usuarios._id)
+    pageAjustes.children.push(clientes._id)
     pageAjustes.children.push(roles._id)
     pageAjustes.children.push(asignarRoles._id)
     pageAjustes.children.push(values._id)
 
+    menu.save()
+
+    schemas.Page.insertMany(listPage).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+
+}
+exports.createMenuMobile = () => {
+
+    var menu = new schemas.Menu({
+        type: 'mobile',
+        title: '',
+        pages: []
+    })
+
+    var listPage = new Array()
+
+    /** Solicitudes */
+    var requests = new schemas.Page({
+        title: 'Solicitudes',
+        href: 'requests',
+        icon: 'RiCustomerService2Fill',
+        isParent: false,
+        backgroundColor: 'E7D9F0',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(requests)
+    menu.pages.push(requests)
+
+    /** Manteniminentos */
+    var maintenances = new schemas.Page({
+        title: 'Mantenimientos',
+        href: 'maintenances',
+        icon: 'RiCustomerService2Fill',
+        isParent: false,
+        backgroundColor: 'EFF0D9',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(maintenances)
+    menu.pages.push(maintenances)
+
+    /** Manteniminentos */
+    var attention = new schemas.Page({
+        title: 'Atenciones',
+        href: 'attentions',
+        icon: 'RiCustomerService2Fill',
+        isParent: false,
+        backgroundColor: 'D9F0DF',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(attention)
+    menu.pages.push(attention)
+
+    /** Reportes de solicitudes */
+    var requestsReport = new schemas.Page({
+        title: 'Reporte de solicitudes',
+        href: 'requests-reports',
+        icon: 'VscProject',
+        isParent: false,
+        backgroundColor: '7fa6ff',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(requestsReport)
+    menu.pages.push(requestsReport)
+
+    /** Reportes de solicitudes */
+    var attentionsReports = new schemas.Page({
+        title: 'Reporte de atenciones',
+        href: 'attentions-reports',
+        icon: 'VscProject',
+        isParent: false,
+        backgroundColor: 'F0E3D9',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(attentionsReports)
+    menu.pages.push(attentionsReports)
+
+
+    /** Reportes de solicitudes */
+    var attentionsReports = new schemas.Page({
+        title: 'Mi cuenta',
+        href: 'account',
+        icon: 'VscProject',
+        isParent: false,
+        backgroundColor: '86dccc',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(attentionsReports)
+    menu.pages.push(attentionsReports)
     menu.save()
 
     schemas.Page.insertMany(listPage).then(function () {
@@ -1233,12 +1398,14 @@ exports.createAttentionType = function () {
     var attentionType = new AttentionType({
         type: 'Emergencia',
         status: 'active',
+        tag: "emergency",
     });
     list.push(attentionType)
 
     var attentionType = new AttentionType({
         type: 'Programada',
         status: 'active',
+        tag: "scheduled",
     });
     list.push(attentionType)
 
@@ -1267,4 +1434,25 @@ exports.updateCustomerToUsers = async function () {
     })
 
     schemas.User.insertMany(listUsers, function () { });
+}
+exports.createRequestType = function () {
+
+    var list = new Array()
+
+    var RequestType = schemas.RequestType;
+    var requestType = new RequestType({
+        type: 'Emergencia',
+        status: 'active',
+        tag: "emergency",
+    });
+    list.push(requestType)
+
+    var requestType = new RequestType({
+        type: 'Programada',
+        status: 'active',
+        tag: "scheduled",
+    });
+    list.push(requestType)
+
+    schemas.RequestType.insertMany(list, function () { });
 }

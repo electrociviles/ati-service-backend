@@ -4,8 +4,8 @@ const jwt = require("jsonwebtoken");
 
 const authMiddleware = express.Router();
 authMiddleware.use((req, res, next) => {
-    const authHeader = req.headers.authorization;
 
+    const authHeader = req.headers.authorization;
     if (authHeader) {
         const token = authHeader.split(' ')[1];
         jwt.verify(token, process.env.SECRET, (err, decoded) => {

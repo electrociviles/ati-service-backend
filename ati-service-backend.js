@@ -60,11 +60,13 @@ app.listen(config.port, function () {
   // init.createCustomer();
   // init.createProject();
   // init.createRole();
-  // init.createMenu();
+  // init.createMenuWeb();
+  // init.createMenuMobile();
   // init.createConfiguration();
   // init.createAttentionType()
   // init.updateCustomerToUsers()
   // init.NewItem();
+  // init.createRequestType();
 
 });
 

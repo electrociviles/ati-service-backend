@@ -29,7 +29,10 @@ var CustomerSchema = new mongoose.Schema({
     address: String,
     email: String,
     phone: String,
-    nit: String
+    nit: String,
+    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    centersOfAttention: [{ type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' }],
+
 });
 var Customer = mongoose.model('Customer', CustomerSchema);
 
@@ -41,7 +44,8 @@ var UserSchema = new mongoose.Schema({
     username: String,
     password: String,
     role: { type: mongoose.Schema.Types.ObjectId, ref: 'role' },
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
     token: String,
     status: String,
     phone: String,
@@ -69,7 +73,7 @@ var ProjectSchema = new mongoose.Schema({
     type: String,
     observation: String,
     downloaded: Boolean,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],
     aroundItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     outletSampling: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
@@ -145,7 +149,7 @@ const AttentionDescriptionSchema = new mongoose.Schema({
     description: String,
     statusSend: String,
     date: Date,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 })
 const AttentionDescription = mongoose.model('attention_description', AttentionDescriptionSchema)
 
@@ -166,10 +170,10 @@ var AttentionSchema = new mongoose.Schema({
     utilidad: mongoose.Schema.Types.Double,
     ivaSobreUtilidad: mongoose.Schema.Types.Double,
     total: mongoose.Schema.Types.Double,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     creator: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     attentionType: { type: mongoose.Schema.Types.ObjectId, ref: 'attention_type' },
-    centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'centerOfAttention' },
+    centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
     descriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'attention_description' }],
 
     presave: Boolean,
@@ -178,6 +182,7 @@ var Attention = mongoose.model('Attention', AttentionSchema);
 
 const MenuSchema = new mongoose.Schema({
     title: String,
+    type: String,
     pages: [{ type: mongoose.Schema.Types.ObjectId, ref: 'page', autopopulate: true }],
 });
 const Menu = mongoose.model('menu', MenuSchema);
@@ -187,6 +192,9 @@ const PageSchema = new mongoose.Schema({
     title: String,
     href: String,
     icon: String,
+    backgroundColor: String,
+    iconColor: String,
+    textColor: String,
     roles: [],
     isParent: Boolean,
     children: [{ type: mongoose.Schema.Types.ObjectId, ref: 'page', autopopulate: true }]
@@ -197,23 +205,52 @@ PageSchema.plugin(require('mongoose-autopopulate'));
 const RoleSchema = new mongoose.Schema({
     name: String,
     status: String,
-    administrative: Boolean
+    tag: String,
+    administrative: Boolean,
 })
 const Role = mongoose.model('role', RoleSchema)
+
+const RequestTypeSchema = new mongoose.Schema({
+    type: String,
+    tag: String,
+    status: String,
+})
+const RequestType = mongoose.model('request_type', RequestTypeSchema)
+
+const RequestDescriptionSchema = new mongoose.Schema({
+    description: String,
+    status: String,
+    date: Date,
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+})
+const RequestDescription = mongoose.model('request_description', RequestDescriptionSchema)
+
+const RequestSchema = new mongoose.Schema({
+    description: String,
+    request_type: { type: mongoose.Schema.Types.ObjectId, ref: 'request_type' },
+    centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    descriptions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'request_description' }],
+    date: Date,
+    status: String
+})
+const Request = mongoose.model('request', RequestSchema)
+
 
 const CenterOfAttentionSchema = new mongoose.Schema({
     title: String,
     description: String,
     status: String,
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    oset: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+    users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     maintenanceCost: mongoose.Schema.Types.Double,
     expirationDateMaintenance: Date,
     statusExpirationDateMaintenance: String,
     provisioningAlertDate: Date,
     statusProvisioningAlertDate: String,
 })
-const CenterOfAttention = mongoose.model('centerOfAttention', CenterOfAttentionSchema)
+const CenterOfAttention = mongoose.model('center_of_attention', CenterOfAttentionSchema)
 
 
 const ConfigurationSchema = new mongoose.Schema({
@@ -224,8 +261,7 @@ const ConfigurationSchema = new mongoose.Schema({
 const Configuration = mongoose.model('configuration', ConfigurationSchema)
 
 
-var schemas =
-{
+var schemas = {
     Customer,
     Board,
     Project,
@@ -241,5 +277,8 @@ var schemas =
     Configuration,
     AttentionType,
     AttentionDescription,
+    RequestType,
+    Request,
+    RequestDescription
 };
 module.exports = schemas;
