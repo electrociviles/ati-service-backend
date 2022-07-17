@@ -91,11 +91,10 @@ router.post('/getMenu', async (req, res) => {
   res.json({ status: 'success', menus });
 });
 
-router.post('/listProjects', async (req, res) => {
+router.post('/listProjects', authMiddleware, async (req, res) => {
 
   let { start, end } = req.body;
   let queryCount = schemas.Project.countDocuments();
-
   var query = schemas.Project.find().populate({
     path: 'boards',
     populate: [{
@@ -127,11 +126,32 @@ router.post('/listProjects', async (req, res) => {
       path: "item"
     }]
   }).sort({ '_id': -1 });
+
   if (req.body.paginate) {
     query.skip(start)
       .limit(end);
   }
 
+  let currentUser = await schemas.User.findById(req.decoded.id);
+  let allowedRole = true;
+
+
+  switch (req.decoded.role.tag) {
+    case "administrator":
+    case "ati":
+
+      break;
+    default:
+      if (currentUser.customer) {
+        query.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+        queryCount.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      } else {
+        allowedRole = false;
+      }
+      break;
+
+
+  }
   console.log(req.body);
 
 
@@ -144,13 +164,17 @@ router.post('/listProjects', async (req, res) => {
     queryCount.where('downloaded').equals(false);
   }
   if (req.body.downloaded) {
-    console.log("Dessssss");
     query.where('downloaded').equals(true);
     queryCount.where('downloaded').equals(true);
   }
-  let projects = await query.exec();
-  let count = await queryCount.exec();
-  res.json({ status: 'success', projects, count });
+
+  if (allowedRole) {
+    let projects = await query.exec();
+    let count = await queryCount.exec();
+    res.json({ status: 'success', projects, count });
+  } else {
+    res.json({ status: 'success', projects: [], count: 0 });
+  }
 });
 
 
@@ -173,12 +197,10 @@ router.post('/getAttention', authMiddleware, async (req, res) => {
 
 router.post('/listAttentions', authMiddleware, async (req, res) => {
   let { start, end } = req.body;
-  let user = req.decoded;
-  console.log("Ussssser ", user)
-  // 5a046fe9627e3526802b3847
+  let currentUser = await schemas.User.findById(req.decoded.id);
+  let allowedRole = true;
 
-  console.log("Body ", req.body)
-
+  let queryCount = schemas.Attention.countDocuments();
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
     populate: [{
@@ -197,20 +219,33 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
     }]
   }).sort({ '_id': -1 });
 
-  let rolesAllas = ["5a046fe9627e3526802b3847"];
 
-  if (!rolesAllas.includes(user.role)) {
-    console.log("aaaaadlkadlasdlknmadmlfmaslfmslkdfmskadmklsadmsdklf");
-    if (user.role == "5a046fe9627e3526802b3848") {
-      query.where('customer').equals(mongoose.Types.ObjectId(user.id));
-      console.log("Customer")
-    }
-    else {
-      query.where('creator').equals(mongoose.Types.ObjectId(user.id));
-      console.log("Creator")
 
-    }
+  console.log("............................................................")
+  console.log(currentUser)
+  console.log(req.decoded.role.tag)
+  switch (req.decoded.role.tag) {
+    case "administrator":
+    case "ati":
+
+      break;
+    case "construction_manager":
+    case "maintenance_manager":
+      query.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      queryCount.where('customer').equals(mongoose.Types.ObjectId(currentUser.customer))
+      break;
+    case "oset":
+    case "permanent":
+    case "technical":
+      query.where('creator').equals(mongoose.Types.ObjectId(currentUser._id))
+      queryCount.where('creator').equals(mongoose.Types.ObjectId(currentUser._id))
+      break;
+    default:
+      allowedRole = false;
+
   }
+
+
 
   if (req.body.paginate) {
     query.skip(start)
@@ -256,7 +291,7 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
   if (customer) {
     incomeCustomer = mongoose.Types.ObjectId(customer);
   } else {
-    incomeCustomer: mongoose.Types.ObjectId(currentUser.customer);
+    incomeCustomer = mongoose.Types.ObjectId(currentUser.customer);
   }
 
   var requestDescription = schemas.RequestDescription({
@@ -264,7 +299,6 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
     status: "created",
     date: new Date(),
     user: mongoose.Types.ObjectId(req.decoded.id),
-    customer: incomeCustomer,
     user: mongoose.Types.ObjectId(req.decoded.id),
   })
   requestDescription.save();
@@ -274,6 +308,7 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
       description,
       request_type: mongoose.Types.ObjectId(requestType),
       centerOfAttention,
+      customer: incomeCustomer,
       date: new Date(),
       status: "created",
       user: mongoose.Types.ObjectId(req.decoded.id),
@@ -344,13 +379,16 @@ router.post('/listRequests', authMiddleware, async (req, res) => {
   let allowedRole = true;
   let currentUser = await schemas.User.findById(req.decoded.id);
 
-  let query = await schemas.Request.find()
+  var query = schemas.Request.find()
+    .select()
     .populate("request_type")
     .populate("user")
     .populate("centerOfAttention")
+  let queryCount = schemas.Request.countDocuments();
 
   switch (req.decoded.role.tag) {
     case "administrator":
+    case "ati":
 
       break;
     case "construction_manager":
@@ -376,12 +414,13 @@ router.post('/listRequests', authMiddleware, async (req, res) => {
 })
 
 
-router.post('/listCustomers', async (req, res) => {
+router.post('/listCustomers', authMiddleware, async (req, res) => {
 
 
   let { start, end, paginate, search, encargado, user, customer } = req.body;
-
+  let currentUser = await schemas.User.findById(req.decoded.id);
   var query = schemas.Customer.find().select();
+  let queryCount = schemas.Customer.countDocuments();
 
   // if (encargado && user) {}}
   //   let usrEncargado = await schemas.User.findById(mongoose.Types.ObjectId(user));
@@ -393,6 +432,21 @@ router.post('/listCustomers', async (req, res) => {
   // if (customer) {
   //   query.where('_id').equals(mongoose.Types.ObjectId(customer));
   // }
+  switch (req.decoded.role.tag) {
+    case "administrator":
+    case "ati":
+
+      break;
+    case "oset":
+    case "permanent":
+    case "construction_manager":
+    case "maintenance_manager":
+      query.where('_id').equals(mongoose.Types.ObjectId(currentUser.customer))
+      // queryCount.where('_id').equals(mongoose.Types.ObjectId(currentUser.customer))
+      break;
+
+  }
+
   query.populate({
     path: "users",
     populate: [{ path: "role" }]
@@ -404,6 +458,8 @@ router.post('/listCustomers', async (req, res) => {
 
   let customers = await query.exec();
 
+  console.log(customers)
+
   let count = await schemas.Customer.countDocuments();
   res.json({ status: 'success', customers, count });
 });
@@ -411,7 +467,7 @@ router.post('/listCustomers', async (req, res) => {
 router.post('/listBoards', async (req, res) => {
 
   console.log(req.body)
-  var query = schemas.Board.find().sort({ '_id': 1 }).select();
+  var query = schemas.Board.find().sort({ '_id': 1 })
   if (req.body.project) {
     query.where('project').equals(mongoose.Types.ObjectId(req.body.project));
   }
@@ -960,9 +1016,7 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 
 });
 
-router.post('/createAttention', upload.any("pictures"), async (req, res) => {
-
-  let user = req.decoded;
+router.post('/createAttention', upload.any("pictures"), authMiddleware, async (req, res) => {
 
   try {
     items = await schemas.Item.find({ mode: { $in: ['attention'] } });
@@ -1000,6 +1054,7 @@ router.post('/createAttention', upload.any("pictures"), async (req, res) => {
       statusSend: "pending",
       price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
+      creator: mongoose.Types.ObjectId(req.decoded.id),
       attentionType: mongoose.Types.ObjectId(req.body.attentionType),
       centerOfAttention: centerOfAttention,
       presave: true
