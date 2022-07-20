@@ -2937,4 +2937,36 @@ router.post('/requestReport', authMiddleware, async (req, res) => {
 
 })
 
+
+router.post('/printRequest', async (req, res) => {
+
+  let { startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
+
+
+  request = await schemas.Request.findById(request._id)
+    .populate("request_type")
+    .populate("user")
+    .populate("centerOfAttention")
+  let data = {
+    attentions: attentions,
+    total: 1000,
+  }
+
+  axios.post(`${config.jsReportClient}reports`, {
+    shortid: 'HklnmnRtb9',
+    data
+  }).then(function (response) {
+    console.log(response.data);
+    res.json({
+      status: 'success',
+      data: response.data,
+      message: 'Documento generado exitosamente'
+    });
+
+  }).catch(function (error) {
+    console.log("error", error);
+  })
+});
+
+
 module.exports = router;
