@@ -275,6 +275,7 @@ router.post('/requestTypes', async (req, res) => {
   let requestTypes = await schemas.RequestType.find().exec();
   res.json({ status: 'success', requestTypes });
 });
+
 router.post('/createRequest', upload.any("files"), authMiddleware, async (req, res) => {
 
   console.log(req.body)
@@ -375,6 +376,7 @@ router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, r
     res.json({ status: 'error', message: "No se puede actualizar la solicitud porque no se encuentra abierta" })
   }
 })
+
 router.post('/listRequests', authMiddleware, async (req, res) => {
   let allowedRole = true;
   let currentUser = await schemas.User.findById(req.decoded.id);
@@ -413,7 +415,6 @@ router.post('/listRequests', authMiddleware, async (req, res) => {
   }
 })
 
-
 router.post('/listCustomers', authMiddleware, async (req, res) => {
 
 
@@ -432,6 +433,7 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
   // if (customer) {
   //   query.where('_id').equals(mongoose.Types.ObjectId(customer));
   // }
+
   switch (req.decoded.role.tag) {
     case "administrator":
     case "ati":
@@ -664,6 +666,7 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
   }
 
 })
+
 router.post('/updateMenuRole', async (req, res) => {
 
   let { status, idpage, idrole } = req.body;
@@ -1494,6 +1497,7 @@ router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
     res.json({ status: 'error' });
   }
 });
+
 router.post('/updateImageAttention', upload.any("pictures"), async (req, res) => {
   console.log(req.body);
   console.log(req.files);
@@ -1843,6 +1847,59 @@ router.post('/deleteUser', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.json({ status: 'error', message: 'Ocurrió un error al desabilitar el funcionario' });
+  }
+});
+
+router.post('/addPersonToCustomer', async (req, res) => {
+  try {
+
+    let { customer, person } = req.body;
+
+    schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(customer) }, {
+      $push: { users: person },
+    }, {
+      multi: true
+    }).exec();
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(person) }, {
+      $set: { customer: customer },
+    }, {
+      multi: true
+    }).exec();
+
+
+    res.json({ status: 'success', message: 'Usuario agregado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al agregar el funcionario' });
+  }
+});
+
+router.post('/removePersonToCustomer', async (req, res) => {
+  try {
+
+    let { customer, person } = req.body;
+    console.log(req.body)
+
+    schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(customer) }, {
+      $pull: { users: person },
+    }, {
+      multi: true
+    }).exec();
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(person) }, {
+      $set: { customer: null },
+    }, {
+      multi: true
+    }).exec();
+
+
+    res.json({ status: 'success', message: 'Usuario agregado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al agregar el funcionario' });
   }
 });
 
@@ -2863,5 +2920,21 @@ router.post('/printReportAttention', async (req, res) => {
     console.log("error", error);
   })
 });
+
+router.post('/requestReport', authMiddleware, async (req, res) => {
+
+  console.log(req.body);
+
+  var query = schemas.Request.find()
+    .select()
+    .populate("request_type")
+    .populate("user")
+    .populate("centerOfAttention")
+  let queryCount = schemas.Request.countDocuments();
+
+  let requests = await query.exec();
+  res.json({ status: 'success', requests, message: "Success" });
+
+})
 
 module.exports = router;
