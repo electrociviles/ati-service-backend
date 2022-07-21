@@ -24,9 +24,11 @@ router.post('/login', async (req, res, next) => {
     .populate({ path: "role" })
   if (user) {
     let result = bcrypt.compareSync(req.body.password, user.password);
-    let token = fn.createToken(user, process.env.SECRET, "100hr");
+    let token = fn.createToken(user, process.env.SECRET, config.tokenLife);
+    let refreshToken = fn.createRefreshToken(user, process.env.SECRET, config.refreshTokenLife);
+
     if (result) {
-      res.json({ status: 'success', token, id: user._id });
+      res.json({ status: 'success', token, refreshToken });
     } else {
       res.json({ status: 'error', message: 'Contraseña incorrecta' });
     }
@@ -34,6 +36,28 @@ router.post('/login', async (req, res, next) => {
     res.json({ status: 'error', message: 'Usuario no encontrado' });
   }
 });
+router.post('/refreshtoken', (req, res) => {
+  // refresh the damn token
+  const postData = req.body
+  console.log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  console.log(postData);
+  // if refresh token exists
+  if ((postData.refreshToken) && (postData.refreshToken in tokenList)) {
+    const user = {
+      "email": postData.email,
+      "name": postData.name
+    }
+    const token = jwt.sign(user, config.secret, { expiresIn: config.tokenLife })
+    const response = {
+      "token": token,
+    }
+    // update the token in the list
+    tokenList[postData.refreshToken].token = token
+    res.status(200).json(response);
+  } else {
+    res.status(404).send('Invalid request')
+  }
+})
 
 router.post('/getMenuByRole', async (req, res) => {
 

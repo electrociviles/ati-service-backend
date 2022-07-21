@@ -11,5 +11,7 @@ module.exports = {
   // pathSavePdf: '/Users/nelsontorres/Developer/Electrociviles/ati-service-backend/pdf/',
   pathSavePdf: "C://Users//HP//Desktop//Me//Electrociviles//ati-v2//ati-service-backend//pdf//",
   pathServicePhp: 'http://localhost/ati-pdf-server/',
-  jsReportClient: 'http://127.0.0.1:4014/'
+  jsReportClient: 'http://127.0.0.1:4014/',
+  tokenLife: 10,
+  refreshTokenLife: 30
 }

@@ -19,6 +19,18 @@ const createToken = (user, secret, expiresIn) => {
         role,
     }, secret, { expiresIn })
 }
+const createRefreshToken = (user, secret, expiresIn) => {
+    const { id, role, name, document_number, photo, username } = user
+
+    return jwt.sign({
+        id,
+        name,
+        document_number,
+        photo,
+        username,
+        role,
+    }, secret, { expiresIn })
+}
 
 const asyncForEach = async (array, callback) => {
     for (let index = 0; index < array.length; index++) {
@@ -415,6 +427,7 @@ const addDateToExpirationDateMaintenance = (expirationDateMaintenance, id) => {
 }
 module.exports = {
     createToken,
+    createRefreshToken,
     asyncForEach,
     verifyItemBoard,
     makedId,
