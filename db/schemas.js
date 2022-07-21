@@ -47,6 +47,7 @@ var UserSchema = new mongoose.Schema({
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
     token: String,
+    refreshToken: String,
     status: String,
     phone: String,
 });

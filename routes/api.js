@@ -27,6 +27,14 @@ router.post('/login', async (req, res, next) => {
     let token = fn.createToken(user, process.env.SECRET, config.tokenLife);
     let refreshToken = fn.createRefreshToken(user, process.env.SECRET, config.refreshTokenLife);
 
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(user._id) }, {
+      $set: {
+        refreshToken,
+      }
+    }, {
+      upsert: true
+    }).exec();
+
     if (result) {
       res.json({ status: 'success', token, refreshToken });
     } else {
@@ -36,23 +44,23 @@ router.post('/login', async (req, res, next) => {
     res.json({ status: 'error', message: 'Usuario no encontrado' });
   }
 });
-router.post('/refreshtoken', (req, res) => {
+router.post('/refreshToken', async (req, res) => {
   // refresh the damn token
   const postData = req.body
   console.log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
   console.log(postData);
-  // if refresh token exists
-  if ((postData.refreshToken) && (postData.refreshToken in tokenList)) {
-    const user = {
-      "email": postData.email,
-      "name": postData.name
-    }
-    const token = jwt.sign(user, config.secret, { expiresIn: config.tokenLife })
+
+  let user = await schemas.User.findOne({ 'refreshToken': postData.refreshToken })
+    .populate({ path: "role" })
+
+  console.log(user)
+
+  if (postData.refreshToken && user) {
+    let token = fn.createToken(user, process.env.SECRET, config.tokenLife);
     const response = {
       "token": token,
     }
-    // update the token in the list
-    tokenList[postData.refreshToken].token = token
+    // tokenList[postData.refreshToken].token = token
     res.status(200).json(response);
   } else {
     res.status(404).send('Invalid request')
