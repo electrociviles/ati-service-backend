@@ -103,6 +103,7 @@ server.listen(config.port, function () {
 
 });
 nsp.on('connection', socket => {
+  console.log("SocketID : " + socket.id)
   if (socket.handshake.query.token !== "null" || socket.handshake.headers.token !== "null") {
     let user = jwt_decode(socket.handshake.query.token ? socket.handshake.query.token : socket.handshake.headers.token)
     console.log(user);
