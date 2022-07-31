@@ -74,7 +74,7 @@ app.use(function (err, req, res, next) {
 
 
 
-
+console.log(config)
 const server = http.Server(app);
 const io = socketIO(server)
 var nsp = io.of(config.namespace)
