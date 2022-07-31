@@ -165,8 +165,8 @@ nsp.on('connection', socket => {
     }
   })
   socket.on('acceptRequest', async data => {
-    // console.log("::::::::::::::::::::::: Request ::::::::::::::::::::");
-    // console.log(data);
+    console.log("::::::::::::::::::::::: Request ::::::::::::::::::::");
+    console.log(data);
   })
   socket.on('updateMenu', async data => {
     let role = await schemas.Role.findById(data.idrole);
