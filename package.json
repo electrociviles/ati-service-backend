@@ -12,14 +12,17 @@
     "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^16.0.1",
+    "excel4node": "^1.8.0",
     "express": "~4.16.1",
+    "fcm-node": "^1.6.1",
     "http-errors": "~1.6.3",
     "hummus-recipe": "^2.0.1",
     "jade": "~1.11.0",
     "jimp": "^0.16.1",
     "jsonwebtoken": "^8.5.1",
     "jsreport-client": "^1.2.1",
-    "moment": "^2.29.3",
+    "jwt-decode": "^3.1.2",
+    "moment": "^2.29.4",
     "mongoose": "^5.13.8",
     "mongoose-autopopulate": "^0.16.1",
     "mongoose-double": "^0.0.1",
@@ -27,6 +30,7 @@
     "multer": "^1.4.4",
     "node-cron": "^3.0.0",
     "node-qpdf": "^1.0.3",
-    "nodemailer": "^6.7.2"
+    "nodemailer": "^6.7.2",
+    "socket.io": "^4.5.1"
   }
 }

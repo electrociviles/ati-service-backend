@@ -8,10 +8,13 @@ module.exports = {
     user: 'nTorres#*Enrrique@Cleo:?mama',
     pass: 'nTJacob*$%@Cleo*..bnSystem'
   },
+  namespace: '/messenger',
   urlPdf: 'https://atiservicios.com/ati/',
   origins: ['https://www.atiservicios.com', 'www.atiservicios.com', 'atiservicios.com', 'http://atiservicios.com'],
   pathSavePdf: '/var/www/ati/ati-service-backend/pdf/',
   pathServicePhp: 'http://localhost:8080/ati-pdf-server/',
-  jsReportClient: 'http://127.0.0.1:4014/'
+  jsReportClient: 'http://127.0.0.1:4014/',
+  tokenLife: '24hr',
+  refreshTokenLife: '50hr'
 
 }

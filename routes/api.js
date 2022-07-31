@@ -11,8 +11,12 @@ var mongoose = require('mongoose');
 const config = require('./../config')
 const axios = require('axios').default;
 const authMiddleware = require("./../middleware/auth");
+const notification = require('./../utils/notification');
 const moment = require('moment');
 moment.locale('es');
+const jwt_decode = require("jwt-decode");
+const { log } = require('console');
+var excel = require('excel4node');
 
 router.post('/', (req, res, next) => {
   res.json({ status: 'respond with a resource' });
@@ -45,23 +49,17 @@ router.post('/login', async (req, res, next) => {
   }
 });
 router.post('/refreshToken', async (req, res) => {
-  // refresh the damn token
-  const postData = req.body
-  console.log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-  console.log(postData);
+  const { refreshToken } = req.body
 
-  let user = await schemas.User.findOne({ 'refreshToken': postData.refreshToken })
+  let _user = jwt_decode(refreshToken)
+
+  let user = await schemas.User.findById(_user.id)
     .populate({ path: "role" })
 
-  console.log(user)
 
-  if (postData.refreshToken && user) {
+  if (refreshToken && user) {
     let token = fn.createToken(user, process.env.SECRET, config.tokenLife);
-    const response = {
-      "token": token,
-    }
-    // tokenList[postData.refreshToken].token = token
-    res.status(200).json(response);
+    res.status(200).json({ token });
   } else {
     res.status(404).send('Invalid request')
   }
@@ -70,6 +68,8 @@ router.post('/refreshToken', async (req, res) => {
 router.post('/getMenuByRole', async (req, res) => {
 
   let { role, type } = req.body;
+
+  console.log(req.body)
 
   var list = []
   let menus = await schemas.Menu.findOne({ type }).populate({
@@ -123,11 +123,11 @@ router.post('/getMenu', async (req, res) => {
   res.json({ status: 'success', menus });
 });
 
-router.post('/listProjects', authMiddleware, async (req, res) => {
+router.post('/listMaintenances', authMiddleware, async (req, res) => {
 
   let { start, end } = req.body;
-  let queryCount = schemas.Project.countDocuments();
-  var query = schemas.Project.find().populate({
+  let queryCount = schemas.Maintenance.countDocuments();
+  var query = schemas.Maintenance.find().populate({
     path: 'boards',
     populate: [{
       path: "itemsBoards",
@@ -164,12 +164,14 @@ router.post('/listProjects', authMiddleware, async (req, res) => {
       .limit(end);
   }
 
-  let currentUser = await schemas.User.findById(req.decoded.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id);
   let allowedRole = true;
 
 
-  switch (req.decoded.role.tag) {
+  console.log("req.currentUser.role.tag    ", req.currentUser.role.tag)
+  switch (req.currentUser.role.tag) {
     case "administrator":
+    case "technical":
     case "ati":
 
       break;
@@ -181,11 +183,7 @@ router.post('/listProjects', authMiddleware, async (req, res) => {
         allowedRole = false;
       }
       break;
-
-
   }
-  console.log(req.body);
-
 
   if (req.body.search) {
     query.where('name').equals(new RegExp(req.body.search, "i"));
@@ -201,11 +199,11 @@ router.post('/listProjects', authMiddleware, async (req, res) => {
   }
 
   if (allowedRole) {
-    let projects = await query.exec();
+    let maintenances = await query.exec();
     let count = await queryCount.exec();
-    res.json({ status: 'success', projects, count });
+    res.json({ status: 'success', maintenances, count });
   } else {
-    res.json({ status: 'success', projects: [], count: 0 });
+    res.json({ status: 'success', maintenances: [], count: 0 });
   }
 });
 
@@ -229,7 +227,7 @@ router.post('/getAttention', authMiddleware, async (req, res) => {
 
 router.post('/listAttentions', authMiddleware, async (req, res) => {
   let { start, end } = req.body;
-  let currentUser = await schemas.User.findById(req.decoded.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id);
   let allowedRole = true;
 
   let queryCount = schemas.Attention.countDocuments();
@@ -240,6 +238,8 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
     }]
   }).populate({
     path: 'customer',
+  }).populate({
+    path: 'creator',
   }).populate({
     path: 'attentionType',
   }).populate({
@@ -253,10 +253,7 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
 
 
 
-  console.log("............................................................")
-  console.log(currentUser)
-  console.log(req.decoded.role.tag)
-  switch (req.decoded.role.tag) {
+  switch (req.currentUser.role.tag) {
     case "administrator":
     case "ati":
 
@@ -302,6 +299,16 @@ router.post('/getAttention', async (req, res) => {
   res.json({ status: 'success', attention });
 });
 
+router.post('/testNotificationFCM', async (req, res) => {
+
+  // let { data, tokenFCM } = req.body;
+  // let registration_ids = [tokenFCM];
+  // notification.sendNotification( registration_ids, 'Test', `Esto es una prueba`, data);
+
+
+  res.json({ status: 'success', foundUsers });
+});
+
 router.post('/requestTypes', async (req, res) => {
 
   let requestTypes = await schemas.RequestType.find().exec();
@@ -310,9 +317,7 @@ router.post('/requestTypes', async (req, res) => {
 
 router.post('/createRequest', upload.any("files"), authMiddleware, async (req, res) => {
 
-  console.log(req.body)
-  let currentUser = await schemas.User.findById(req.decoded.id);
-
+  let currentUser = await schemas.User.findById(req.currentUser.id);
 
   let { description, requestType, centerOfAttention, customer } = req.body;
   if (req.body.centerOfAttention) {
@@ -331,28 +336,34 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
     description: "Enviado",
     status: "created",
     date: new Date(),
-    user: mongoose.Types.ObjectId(req.decoded.id),
-    user: mongoose.Types.ObjectId(req.decoded.id),
+    user: mongoose.Types.ObjectId(req.currentUser.id),
   })
   requestDescription.save();
 
+  let count = await schemas.Request.countDocuments();
+
   try {
     let request = new schemas.Request({
+      number: count + 1,
       description,
       request_type: mongoose.Types.ObjectId(requestType),
       centerOfAttention,
       customer: incomeCustomer,
       date: new Date(),
       status: "created",
-      user: mongoose.Types.ObjectId(req.decoded.id),
+      user: mongoose.Types.ObjectId(req.currentUser.id),
       descriptions: [requestDescription._id]
     });
-    console.log(request)
     await request.save();
 
     request = await schemas.Request.findById(request._id)
       .populate("request_type")
-      .populate("user")
+      .populate({
+        path: "user",
+        populate: [
+          { path: 'role' }
+        ]
+      })
       .populate("centerOfAttention")
 
 
@@ -382,7 +393,6 @@ router.post('/getRequest', upload.any("files"), authMiddleware, async (req, res)
 router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, res) => {
 
   let { id, observation, requestType } = req.body;
-  console.log(req.body)
 
   let request = await schemas.Request.findById(mongoose.Types.ObjectId(id));
 
@@ -411,16 +421,17 @@ router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, r
 
 router.post('/listRequests', authMiddleware, async (req, res) => {
   let allowedRole = true;
-  let currentUser = await schemas.User.findById(req.decoded.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id);
 
   var query = schemas.Request.find()
     .select()
     .populate("request_type")
     .populate("user")
     .populate("centerOfAttention")
+    .sort({ '_id': -1 })
   let queryCount = schemas.Request.countDocuments();
 
-  switch (req.decoded.role.tag) {
+  switch (req.currentUser.role.tag) {
     case "administrator":
     case "ati":
 
@@ -451,7 +462,7 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
 
 
   let { start, end, paginate, search, encargado, user, customer } = req.body;
-  let currentUser = await schemas.User.findById(req.decoded.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id);
   var query = schemas.Customer.find().select();
   let queryCount = schemas.Customer.countDocuments();
 
@@ -466,7 +477,8 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
   //   query.where('_id').equals(mongoose.Types.ObjectId(customer));
   // }
 
-  switch (req.decoded.role.tag) {
+
+  switch (req.currentUser.role.tag) {
     case "administrator":
     case "ati":
 
@@ -492,7 +504,6 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
 
   let customers = await query.exec();
 
-  console.log(customers)
 
   let count = await schemas.Customer.countDocuments();
   res.json({ status: 'success', customers, count });
@@ -500,10 +511,9 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
 
 router.post('/listBoards', async (req, res) => {
 
-  console.log(req.body)
   var query = schemas.Board.find().sort({ '_id': 1 })
-  if (req.body.project) {
-    query.where('project').equals(mongoose.Types.ObjectId(req.body.project));
+  if (req.body.maintenance) {
+    query.where('maintenance').equals(mongoose.Types.ObjectId(req.body.maintenance));
   }
   let boards = await query.exec();
   res.json({ status: 'success', boards });
@@ -535,8 +545,7 @@ router.post('/updatedBoard', async (req, res) => {
 
 router.post('/updateAttentionWeb', upload.any("files"), authMiddleware, async (req, res) => {
 
-  console.log(req.body);
-  console.log(req.files);
+
   let { id, name, description } = req.body
 
   schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
@@ -568,7 +577,7 @@ router.post('/updateAdditionalInformationAttention', upload.any("files"), authMi
       description: text,
       statusSend: status,
       date: new Date(),
-      user: mongoose.Types.ObjectId(req.decoded.id),
+      user: mongoose.Types.ObjectId(req.currentUser.id),
     });
 
     attentionDescription.save();
@@ -634,8 +643,6 @@ router.post('/updateAdditionalInformationAttention', upload.any("files"), authMi
 
 router.post('/confirmRejectAttentionCustomer', authMiddleware, async (req, res) => {
 
-  console.log(req.body);
-  console.log(req.decoded);
   let { statusSend, description, id } = req.body
 
 
@@ -643,7 +650,7 @@ router.post('/confirmRejectAttentionCustomer', authMiddleware, async (req, res) 
     description,
     statusSend,
     date: new Date(),
-    customer: mongoose.Types.ObjectId(req.decoded.id),
+    customer: mongoose.Types.ObjectId(req.currentUser.id),
   })
   attentionDescription.save();
 
@@ -663,27 +670,47 @@ router.post('/confirmRejectAttentionCustomer', authMiddleware, async (req, res) 
 
 router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
   try {
-    console.log(req.body);
-    console.log(req.decoded);
     let { statusRequest, description, id } = req.body
 
+    console.log(req.body)
 
-    var requestDescription = schemas.RequestDescription({
-      description,
-      statu: statusRequest,
-      date: new Date(),
-      user: mongoose.Types.ObjectId(req.decoded.id),
-    })
-    requestDescription.save();
+    let request = await schemas.Request.findById(id)
+      .populate("centerOfAttention")
+      .populate("request_type");
 
-    schemas.Request.updateOne({ _id: mongoose.Types.ObjectId(id) }, {
-      $set: {
-        status: statusRequest,
-      },
-      $push: { "descriptions": requestDescription._id },
-    }, {
-      multi: true
-    }).exec();
+    var foundUsers = await schemas.User.find().where('_id').in(request.centerOfAttention.users);
+    var users = foundUsers.filter(user => user.tokenFCM);
+    var ids = users.map(user => user.tokenFCM);
+
+    console.log(foundUsers)
+    console.log("---------------------------------------------------------------")
+    console.log(ids)
+    console.log("---------------------------------------------------------------")
+    console.log(request)
+
+    if (ids.length > 0) {
+      setTimeout(() => {
+        notification.sendNotification(ids, `Solicitud ${statusRequest == 'accept' ? 'Aprobada' : 'Rechazada'}`, `[${request.request_type.type}] ${request.description}`, {});
+      }, 4000);
+    }
+
+
+    // var requestDescription = schemas.RequestDescription({
+    //   description,
+    //   statu: statusRequest,
+    //   date: new Date(),
+    //   user: mongoose.Types.ObjectId(req.currentUser.id),
+    // })
+    // requestDescription.save();
+
+    // schemas.Request.updateOne({ _id: mongoose.Types.ObjectId(id) }, {
+    //   $set: {
+    //     status: statusRequest,
+    //   },
+    //   $push: { "descriptions": requestDescription._id },
+    // }, {
+    //   multi: true
+    // }).exec();
 
     let textMessage = 'aceptada';
     if (statusRequest == 'reject')
@@ -722,9 +749,9 @@ router.post('/updateMenuRole', async (req, res) => {
 
 })
 
-router.post('/updatedProject', async (req, res) => {
-  let projects = await schemas.Project.find();
-  await fn.asyncForEach(projects, async project => {
+router.post('/updatedmaintenance', async (req, res) => {
+  let maintenances = await schemas.Maintenance.find();
+  await fn.asyncForEach(maintenances, async maintenance => {
 
     items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
 
@@ -732,7 +759,7 @@ router.post('/updatedProject', async (req, res) => {
     let upsAutonomies = [];
     await fn.asyncForEach(items, async item => {
       let itemImage = schemas.ItemImage({
-        project: mongoose.Types.ObjectId(project._id),
+        maintenance: mongoose.Types.ObjectId(maintenance._id),
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
@@ -749,7 +776,7 @@ router.post('/updatedProject', async (req, res) => {
     items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
     await fn.asyncForEach(items, async item => {
       let itemImage = schemas.ItemImage({
-        project: mongoose.Types.ObjectId(project._id),
+        maintenance: mongoose.Types.ObjectId(maintenance._id),
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
@@ -762,7 +789,7 @@ router.post('/updatedProject', async (req, res) => {
       upsAutonomies.push(itemImage);
     });
 
-    schemas.Project.updateOne({ _id: mongoose.Types.ObjectId(project._id) }, {
+    schemas.Maintenance.updateOne({ _id: mongoose.Types.ObjectId(maintenance._id) }, {
       $set: { emergencylight: emergencylights, upsAutonomy: upsAutonomies }
     }, {
       multi: true
@@ -781,7 +808,7 @@ router.post('/createBoard', async (req, res) => {
       name: req.body.name,
       type: req.body.type,
       status: 'created',
-      project: mongoose.Types.ObjectId(req.body.project),
+      maintenance: mongoose.Types.ObjectId(req.body.maintenance),
       observation: ''
     });
     if (req.body.type == 'tri') {
@@ -807,7 +834,7 @@ router.post('/createBoard', async (req, res) => {
 
     await board.save();
 
-    schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(req.body.project) }, {
+    schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(req.body.maintenance) }, {
       $push: { boards: board._id }
     }, {
       multi: true
@@ -823,10 +850,7 @@ router.post('/createBoard', async (req, res) => {
 
 router.post('/getItemBoard', async (req, res) => {
 
-  console.log("-------------------------------------------------")
-  console.log(req.body);
   let completed = await fn.verifyItemBoard(req.body.board);
-  console.log("completed ", completed)
   items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),).populate({
     path: 'itemsBoards',
     match: { status: "activo" },
@@ -838,10 +862,9 @@ router.post('/getItemBoard', async (req, res) => {
   res.json({ status: 'success', completed, items });
 });
 
-router.post('/updateObservationProject', async (req, res) => {
+router.post('/updateObservationMaintenance', async (req, res) => {
 
-  console.log(req.body);
-  schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+  schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
     $set: { observation: req.body.observations }
   }, {
     multi: true
@@ -852,7 +875,6 @@ router.post('/updateObservationProject', async (req, res) => {
 
 router.post('/updateObservationItem', async (req, res) => {
 
-  console.log(req.body);
   schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemBoardId) }, {
     $set: { observations: req.body.observations }
   }, {
@@ -865,7 +887,6 @@ router.post('/updateObservationItem', async (req, res) => {
 
 router.post('/updateTitleItem', async (req, res) => {
 
-  console.log(req.body);
   schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemBoardId) }, {
     $set: { title: req.body.title }
   }, {
@@ -876,7 +897,7 @@ router.post('/updateTitleItem', async (req, res) => {
 
 })
 
-router.post('/createProject', async (req, res) => {
+router.post('/createMaintenance', async (req, res) => {
 
   try {
     let aroundItems = [];
@@ -884,18 +905,20 @@ router.post('/createProject', async (req, res) => {
     let emergencylight = [];
     let upsAutonomy = [];
 
-    let project = new schemas.Project({
+    let maintenance = new schemas.Maintenance({
       name: req.body.name,
       type: req.body.type,
       observation: req.body.observation,
       downloaded: false,
-      customer: mongoose.Types.ObjectId(req.body.customer)
+      customer: mongoose.Types.ObjectId(req.body.customer),
+      status: "active",
+      centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention)
     });
 
     items = await schemas.Item.find({ mode: { $in: ['around'] } });
     await fn.asyncForEach(items, async item => {
       let itemImage = schemas.ItemImage({
-        project: project._id,
+        maintenance: maintenance._id,
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
@@ -907,13 +930,13 @@ router.post('/createProject', async (req, res) => {
       await itemImage.save();
       aroundItems.push(itemImage);
     });
-    project.aroundItems = aroundItems;
+    maintenance.aroundItems = aroundItems;
 
 
     items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
     await fn.asyncForEach(items, async item => {
       let itemImage = schemas.ItemImage({
-        project: project._id,
+        maintenance: maintenance._id,
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
@@ -925,14 +948,14 @@ router.post('/createProject', async (req, res) => {
       await itemImage.save();
       outletSampling.push(itemImage);
     });
-    project.outletSampling = outletSampling;
+    maintenance.outletSampling = outletSampling;
 
 
 
     items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
     await fn.asyncForEach(items, async item => {
       let itemImage = schemas.ItemImage({
-        project: project._id,
+        maintenance: maintenance._id,
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
@@ -944,12 +967,12 @@ router.post('/createProject', async (req, res) => {
       await itemImage.save();
       emergencylight.push(itemImage);
     });
-    project.emergencylight = emergencylight;
+    maintenance.emergencylight = emergencylight;
 
     items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
     await fn.asyncForEach(items, async item => {
       let itemImage = schemas.ItemImage({
-        project: project._id,
+        maintenance: maintenance._id,
         item: mongoose.Types.ObjectId(item._id),
         status: 'activo',
         photos: [],
@@ -961,12 +984,12 @@ router.post('/createProject', async (req, res) => {
       await itemImage.save();
       upsAutonomy.push(itemImage);
     });
-    project.upsAutonomy = upsAutonomy;
+    maintenance.upsAutonomy = upsAutonomy;
 
 
-    project.save();
+    maintenance.save();
 
-    res.json({ status: 'success', message: "Proyecto registrado exitosamente.", project, });
+    res.json({ status: 'success', message: "Proyecto registrado exitosamente.", maintenance, });
   } catch (error) {
     console.log(error)
     res.json({ status: 'error', message: error });
@@ -975,7 +998,6 @@ router.post('/createProject', async (req, res) => {
 
 router.post('/removeMeasurement', async (req, res) => {
 
-  console.log(req.body);
   try {
     schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: { status: 'inactivo' }
@@ -992,7 +1014,7 @@ router.post('/removeMeasurement', async (req, res) => {
 
 router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
 
-  console.log(JSON.stringify(req.body, null, 6))
+  // console.log(JSON.stringify(req.body, null, 6))
 
   try {
     await fn.asyncForEach(req.files, async (file, index) => {
@@ -1002,7 +1024,6 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
       src.pipe(outStream);
 
       src.on('end', async () => {
-        console.log('end');
         fs.unlinkSync(file.path);
 
         const Jimp = require('jimp');
@@ -1023,8 +1044,6 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
     });
     for (var key in req.body) {
       if (key.length == 24 && parseFloat(req.body[key]) > 0) {
-        console.log('key ', key);
-        console.log('value ', req.body[key]);
 
         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(key) }, {
           $set: { value: parseFloat(req.body[key]) }
@@ -1078,7 +1097,10 @@ router.post('/createAttention', upload.any("pictures"), authMiddleware, async (r
       centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
     }
 
+    let count = await schemas.Attention.countDocuments();
+
     let attention = new schemas.Attention({
+      number: count + 1,
       attentionItems: listAttentionImage,
       description: req.body.observations,
       title: req.body.title,
@@ -1089,7 +1111,7 @@ router.post('/createAttention', upload.any("pictures"), authMiddleware, async (r
       statusSend: "pending",
       price: parseFloat(req.body.price),
       customer: mongoose.Types.ObjectId(req.body.customer),
-      creator: mongoose.Types.ObjectId(req.decoded.id),
+      creator: mongoose.Types.ObjectId(req.currentUser.id),
       attentionType: mongoose.Types.ObjectId(req.body.attentionType),
       centerOfAttention: centerOfAttention,
       presave: true
@@ -1117,16 +1139,23 @@ router.post('/createAttention', upload.any("pictures"), authMiddleware, async (r
 
 router.post('/finishBoard', async (req, res) => {
   try {
-    let board = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.id),).populate({
-      path: 'itemsBoards',
-      match: { status: "activo" },
-      populate: [{
-        path: "item",
+    let board = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.id),)
+      .populate({
+        path: 'itemsBoards',
+        match: { status: "activo" },
+        populate: [{
+          path: "item",
 
-      }]
-    }).exec();
+        }]
+      }).populate({
+        path: "maintenance",
+        populate: [{ path: 'customer' }]
+      })
+      .exec();
 
     if (!fn.validateBoard(board)) {
+
+
       schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
         $set: {
           status: 'finished'
@@ -1135,16 +1164,46 @@ router.post('/finishBoard', async (req, res) => {
         multi: true
       }).exec();
 
-      let users = await schemas.User.find({ role: 'administrator' });
+      var foundUsers = await schemas.User.aggregate([{
+        $match: {
+          '_id': {
+            '$in': board.maintenance.customer.users
+          }
+        },
+      }, {
+        $project: {
+          username: 1,
+          tokenFCM: 1,
+          role: 1,
+        }
+      }, {
+        $lookup: {
+          from: "roles",
+          localField: "role",
+          foreignField: "_id",
+          as: "role"
+        }
+      }, {
+        $unwind: { path: "$role" }
+      }, {
+        $match:
+        {
+          "role.tag": {
+            $in: ["construction_manager", "maintenance_manager"]
+          }
+        }
+      }
+      ])
 
+      console.log("foundUsers    ", foundUsers)
+      var users = foundUsers.filter(user => user.tokenFCM);
+      var ids = users.map(user => user.tokenFCM);
 
-      // let registration_ids = [];
-      // users.forEach(user => {
-      //   if (user.token) {
-      //     registration_ids.push(user.token);
-      //   }
-      //   notification.sendNotification('', registration_ids, 'Tablero finalizado', `El tablero ${board.name} ha finalizado`, data);
-      // });
+      if (ids.length > 0) {
+        setTimeout(() => {
+          notification.sendNotification(ids, 'Tablero finalizado', `[${board.type == 'tri' ? "Trifásico" : "Monofásico"}] ${board.name}`, {});
+        }, 4000);
+      }
 
       // await fn.sendEmailBoard(req.body.id);
 
@@ -1167,9 +1226,9 @@ router.post('/finishBoard', async (req, res) => {
   }
 });
 
-router.post('/finishProject', async (req, res) => {
+router.post('/finishMaintenance', async (req, res) => {
   try {
-    let project = await schemas.Project.findById(mongoose.Types.ObjectId(req.body.id),).populate({
+    let maintenance = await schemas.Maintenance.findById(mongoose.Types.ObjectId(req.body.id),).populate({
       path: 'boards',
       populate: [{
         path: 'itemsBoards',
@@ -1183,7 +1242,7 @@ router.post('/finishProject', async (req, res) => {
       select: { _id: 0, name: 1 }
     }).exec();
 
-    let newBoards = project.boards.map(board => {
+    let newBoards = maintenance.boards.map(board => {
 
       let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
       let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
@@ -1240,16 +1299,6 @@ router.post('/finishProject', async (req, res) => {
       return newBoard;
 
     })
-    let newProject = {
-      date: fn.getDateReport(),
-      name: project.name,
-      type: project.type === 'tri' ? 'Trifásico' : 'Monofásico',
-      customer: project.customer,
-      boards: newBoards,
-    }
-    console.log(JSON.stringify(newProject, null, 6))
-
-
 
     res.json({
       status: 'success',
@@ -1267,7 +1316,6 @@ router.post('/finishProject', async (req, res) => {
 
 router.post('/openAttention', async (req, res) => {
   try {
-    console.log(req.body);
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         status: 'created'
@@ -1319,7 +1367,6 @@ router.post('/closeAttention', async (req, res) => {
 //   try {
 //     await fn.asyncForEach(req.files, async (file) => {
 //       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-//       console.log(fileName);
 //       let src = await fs.createReadStream(file.path);
 //       let dest = await fs.createWriteStream('./uploads/' + fileName);
 //       src.pipe(dest);
@@ -1354,12 +1401,12 @@ router.post('/closeAttention', async (req, res) => {
 // });
 
 router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
-  console.log(req.body)
-  console.log(req.files)
+
   try {
+    console.log(req.body)
+    console.log(req.files)
     await fn.asyncForEach(req.files, async (file) => {
       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      console.log(fileName);
       let src = await fs.createReadStream(file.path);
       let dest = await fs.createWriteStream('./uploads/' + fileName);
       src.pipe(dest);
@@ -1372,7 +1419,7 @@ router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) =>
         await image.quality(50);
         await image.writeAsync('./uploads/' + fileName);
 
-        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
           $push: { photos: { url: fileName, type: 'remote' } }
         }, {
           upsert: true
@@ -1399,8 +1446,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
 
     let fileNameSign = '';
 
-    console.log('req.body', req.body);
-    console.log('req.files', req.files);
 
     if (req.files) {
       await fn.asyncForEach(req.files, async (file) => {
@@ -1409,7 +1454,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
         let dest = await fs.createWriteStream('./uploads/' + fileName);
         src.pipe(dest);
         src.on('end', async () => {
-          console.log('end');
           fs.unlinkSync(file.path);
 
           const Jimp = require('jimp');
@@ -1456,7 +1500,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
 
 router.post('/updateAutomyValue', async (req, res) => {
 
-  console.log(req.body)
   if (req.body.id && req.body.value) {
     let hour = moment(new Date()).format('D-MMMM-YYYY, h:mm:ss a');
     let { id, value } = req.body;
@@ -1475,7 +1518,6 @@ router.post('/updateAutomyValue', async (req, res) => {
 
 router.post('/updateValue', async (req, res) => {
 
-  console.log(req.body)
   if (req.body.id && req.body.value) {
     let { id, value } = req.body;
     schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
@@ -1491,12 +1533,11 @@ router.post('/updateValue', async (req, res) => {
 })
 
 router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
-  console.log(req.body)
-  console.log(req.files)
   try {
+    console.log(req.body);
+
     await fn.asyncForEach(req.files, async (file) => {
       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      console.log(fileName);
       let src = await fs.createReadStream(file.path);
       let dest = await fs.createWriteStream('./uploads/' + fileName);
       src.pipe(dest);
@@ -1509,7 +1550,7 @@ router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
         await image.quality(50);
         await image.writeAsync('./uploads/' + fileName);
 
-        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
           $push: { photos: { url: fileName, type: 'remote' } }
         }, {
           upsert: true
@@ -1531,12 +1572,9 @@ router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
 });
 
 router.post('/updateImageAttention', upload.any("pictures"), async (req, res) => {
-  console.log(req.body);
-  console.log(req.files);
   try {
     await fn.asyncForEach(req.files, async (file) => {
       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      console.log(fileName);
       let src = await fs.createReadStream(file.path);
       let dest = await fs.createWriteStream('./uploads/' + fileName);
       src.pipe(dest);
@@ -1549,7 +1587,7 @@ router.post('/updateImageAttention', upload.any("pictures"), async (req, res) =>
         await image.quality(50);
         await image.writeAsync('./uploads/' + fileName);
 
-        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
           $push: { photos: { url: fileName, type: 'remote' } }
         }, {
           upsert: true
@@ -1581,16 +1619,19 @@ router.post('/getItemAttention', async (req, res) => {
   res.json({ status: 'success', completed, items });
 });
 
-router.post('/getInfoUser', async (req, res) => {
+router.post('/getInfoUser', authMiddleware, async (req, res) => {
 
-  let user = await schemas.User.findById(mongoose.Types.ObjectId(req.body.id),).exec();
+  let user = await schemas.User.findById(mongoose.Types.ObjectId(req.currentUser.id),).exec();
   res.json({ status: 'success', user });
 });
 
-router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
+router.post('/updateAccount', authMiddleware, upload.any("pictures"), async (req, res) => {
   try {
-    console.log("*********************************************");
-    console.log(req.body);
+
+    console.log(req.currentUser)
+    console.log(req.body)
+    console.log(req.files)
+
     let fileName = 'default.png';
     await fn.asyncForEach(req.files, async (file) => {
       let src = fs.createReadStream(file.path);
@@ -1610,7 +1651,7 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
       src.on('error', (err) => {
         console.log(err)
       });
-      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.currentUser.id) }, {
         $set: {
           photo: fileName
         }
@@ -1619,7 +1660,7 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
       }).exec();
     });
 
-    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.currentUser.id) }, {
       $set: {
         name: req.body.name,
         document_number: req.body.document_number,
@@ -1633,7 +1674,7 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
       const salt = await bcrypt.genSalt(10);
       let password = await bcrypt.hash(req.body.password, salt);
 
-      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+      schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.currentUser.id) }, {
         $set: { password: password }
       }, {
         multi: true
@@ -1648,14 +1689,12 @@ router.post('/updateAccount', upload.any("pictures"), async (req, res) => {
   }
 });
 
-router.post('/updateToken', async (req, res) => {
+router.post('/updateToken', authMiddleware, async (req, res) => {
   try {
-    console.log(req.body);
-    console.log("---------------- files ----------------");
 
-    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(req.currentUser.id) }, {
       $set: {
-        token: req.body.token
+        tokenFCM: req.body.token
       }
     }, {
       multi: true
@@ -1672,7 +1711,6 @@ router.post('/updateToken', async (req, res) => {
 router.post('/listUsers', async (req, res) => {
 
   let { start, end, paginate } = req.body;
-  console.log(req.body);
 
   let query = schemas.User.find()
     .sort({ '_id': -1 })
@@ -1707,7 +1745,6 @@ router.post('/listAttentionTypes', async (req, res) => {
 router.post('/listConfigurations', async (req, res) => {
 
   let { start, end, paginate } = req.body;
-  console.log(req.body);
 
   let query = schemas.Configuration.find()
 
@@ -1734,7 +1771,6 @@ router.post('/updateUser', upload.any("photo"), async (req, res) => {
       let dest = await fs.createWriteStream('./uploads/' + fileName);
       src.pipe(dest);
       src.on('end', () => {
-        console.log('end');
         fs.unlinkSync(file.path);
       });
       src.on('error', (err) => {
@@ -1755,6 +1791,8 @@ router.post('/updateUser', upload.any("photo"), async (req, res) => {
         username: req.body.username,
         document_number: req.body.documentNumber,
         role: req.body.role,
+        phone: req.body.phone,
+        email: req.body.email,
       }
     }, {
       multi: true
@@ -1791,7 +1829,6 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
           let dest = await fs.createWriteStream('./uploads/' + fileName);
           src.pipe(dest);
           src.on('end', async () => {
-            console.log('end');
             fs.unlinkSync(file.path);
 
             const Jimp = require('jimp');
@@ -1832,6 +1869,8 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
         role: req.body.role,
         photo: fileName,
         password: req.body.password,
+        phone: req.body.phone,
+        email: req.body.email,
         customer,
         centerOfAttention,
         status: 'activo'
@@ -1912,7 +1951,6 @@ router.post('/removePersonToCustomer', async (req, res) => {
   try {
 
     let { customer, person } = req.body;
-    console.log(req.body)
 
     schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(customer) }, {
       $pull: { users: person },
@@ -1958,13 +1996,7 @@ router.post('/listCenterOfAttention', authMiddleware, async (req, res) => {
 
   let { start, end, paginate, customer } = req.body;
 
-  console.log("----------------------------------------")
-  console.log(req.body)
-  console.log(req.decoded)
-
-  console.log("----------------------------------------")
-
-  let currentUser = await schemas.User.findById(req.decoded.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id);
   let queryCount = schemas.CenterOfAttention.countDocuments();
   let query = schemas.CenterOfAttention.find()
     .sort({ '_id': 1 })
@@ -1972,10 +2004,8 @@ router.post('/listCenterOfAttention', authMiddleware, async (req, res) => {
 
   allowedRole = true;
 
-  console.log("....................")
-  console.log(currentUser)
-
-  switch (req.decoded.role.tag) {
+  console.log(req.currentUser.role.tag)
+  switch (req.currentUser.role.tag) {
     case "administrator":
 
       break;
@@ -1993,6 +2023,7 @@ router.post('/listCenterOfAttention', authMiddleware, async (req, res) => {
       allowedRole = false;
 
   }
+  console.log(customer)
   if (customer) {
     query.where('customer').equals(mongoose.Types.ObjectId(customer))
     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
@@ -2048,19 +2079,75 @@ router.post('/updateCenterOfAttention', upload.any("photo"), async (req, res) =>
   }
 });
 
+router.post('/updateTimeExpiration', async (req, res) => {
+  try {
+
+    console.log(req.body);
+    /*
+      valueSemiAnnual: '1',
+      valueProvisioning: '2',
+      timeSemiAnnual: 'month',
+      timeProvisioning: 'week',
+      customerProvisioning: '62365cf134d34c5edc87a4b6',
+      customerSemiAnnual: '622cc6452958c3c61299998a',
+      centerOfAttentionSemiAnnual: '62cf580b86300a2d38157231',
+      centerOfAttentionProvisioning: '62e187095384ce18ccf3ab18'
+    */
+    let {
+      value,
+      time,
+      type,
+      centerOfAttention
+    } = req.body
+
+    let data = {
+      valueSemiAnnual: value,
+      timeSemiAnnual: time,
+    }
+    if (type == 'provisioning') {
+      data = {
+        valueProvisioning: value,
+        timeProvisioning: time,
+      }
+    }
+
+    await schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(centerOfAttention) }, {
+      $set: {
+        valueSemiAnnual: value,
+        timeSemiAnnual: time,
+      }
+    }, {
+      multi: true
+    }).exec();
+
+
+    res.json({ status: 'success' });
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error' });
+  }
+});
+
 router.post('/createCenterOfAttention', async (req, res) => {
 
+  console.log(req.body)
+  let { valueSemiAnnual, valueProvisioning, timeSemiAnnual, timeProvisioning } = req.body;
   let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': req.body.title })
   if (!centerOfAttention) {
 
     try {
+      let date = new Date();
 
       let centerOfAttention = schemas.CenterOfAttention({
         title: req.body.name,
+        valueSemiAnnual,
+        valueProvisioning,
+        timeSemiAnnual,
+        timeProvisioning,
         description: req.body.description,
         maintenanceCost: req.body.maintenanceCost,
-        expirationDateMaintenance: req.body.expirationDateMaintenance,
-        provisioningAlertDate: req.body.expirationDateMaintenance,
+        expirationDateMaintenance: date,
+        provisioningAlertDate: date,
         statusProvisioningAlertDate: 'pending',
         statusAlertDateMaintenance: 'pending',
         customer: mongoose.Types.ObjectId(req.body.customer),
@@ -2128,7 +2215,6 @@ router.post('/restoreCenterOfAttention', async (req, res) => {
 });
 
 router.post('/openItemBoard', async (req, res) => {
-  console.log(req.body)
   try {
     schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
@@ -2195,7 +2281,6 @@ router.post('/downloadAttention', async (req, res) => {
       axios.post(config.pathServicePhp + 'attention.php', data)
         .then(async (response) => {
 
-          console.log("responsePhp", response.data)
           res.json({
             status: 'success',
             message: 'Documento generado exitosamente'
@@ -2261,7 +2346,6 @@ router.post('/createCustomer', async (req, res) => {
 });
 
 router.post('/updateCustomer', async (req, res) => {
-  console.log(req.body)
   try {
 
     schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
@@ -2283,10 +2367,9 @@ router.post('/updateCustomer', async (req, res) => {
 });
 
 router.post('/saveObservations', async (req, res) => {
-  console.log(req.body)
   try {
 
-    schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+    schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         observation: req.body.observations,
       }
@@ -2300,9 +2383,9 @@ router.post('/saveObservations', async (req, res) => {
   }
 });
 
-router.post('/sendReportProject', async (req, res) => {
+router.post('/sendReportMaintenance', async (req, res) => {
   try {
-    let project = await schemas.Project.findById(mongoose.Types.ObjectId(req.body.id),).populate({
+    let maintenance = await schemas.Maintenance.findById(mongoose.Types.ObjectId(req.body.id),).populate({
       path: 'boards',
       populate: [{
         path: 'itemsBoards',
@@ -2327,7 +2410,7 @@ router.post('/sendReportProject', async (req, res) => {
     }).exec();
 
 
-    let newBoards = project.boards.map(board => {
+    let newMaintenances = maintenance.boards.map(board => {
 
       let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
       let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
@@ -2396,32 +2479,28 @@ router.post('/sendReportProject', async (req, res) => {
     })
 
     let data = {
-      id: project._id,
+      id: maintenance._id,
       date: fn.getDateReport(),
-      name: project.name,
-      type: project.type === 'tri' ? 'Trifásico' : 'Monofásico',
-      customer: project.customer,
+      name: maintenance.name,
+      type: maintenance.type === 'tri' ? 'Trifásico' : 'Monofásico',
+      customer: maintenance.customer,
       boards: newBoards,
-      aroundItems: project.aroundItems,
-      outletSampling: project.outletSampling,
+      aroundItems: maintenance.aroundItems,
+      outletSampling: maintenance.outletSampling,
       pathServicePhp: config.pathSavePdf
     }
 
-    if (fs.existsSync(`./pdf/${project._id}.pdf`)) {
-      fs.unlinkSync(`./pdf/${project._id}.pdf`);
+    if (fs.existsSync(`./pdf/${maintenance._id}.pdf`)) {
+      fs.unlinkSync(`./pdf/${maintenance._id}.pdf`);
     }
 
-    axios.post(config.pathServicePhp + 'project.php', data)
+    axios.post(config.pathServicePhp + 'maintenance.php', data)
       .then(async (response) => {
 
-        console.log(response.data)
         if (req.body.type == "email")
-          await fn.sendEmailProject(response.data.data.id);
-        // else {
-        //   url = fs.readFileSync(`./pdf/${project._id}.pdf`, { encoding: 'base64' });
-        // }
+          await fn.sendEmailMaintenance(response.data.data.id);
 
-        schemas.Project.updateOne({ "_id": mongoose.Types.ObjectId(project._id) }, {
+        schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
           $set: {
             downloaded: true
           }
@@ -2493,7 +2572,6 @@ router.post('/finishAttention', async (req, res) => {
       axios.post(config.pathServicePhp + 'attention.php', data)
         .then(async (response) => {
 
-          console.log(response.data)
           // await fn.sendEmailAttention(attention._id);
 
           res.json({
@@ -2527,7 +2605,6 @@ router.post('/finishAttention', async (req, res) => {
 });
 
 router.post('/updateObservationBoard', async (req, res) => {
-  console.log(req.body);
 
   try {
 
@@ -2548,7 +2625,6 @@ router.post('/updateObservationBoard', async (req, res) => {
 });
 
 router.post('/removeImageFromAttentionItem', async (req, res) => {
-  console.log(req.body);
 
   try {
 
@@ -2583,7 +2659,6 @@ router.post('/removeImageFromAttentionItem', async (req, res) => {
 });
 
 router.post('/removeImage', async (req, res) => {
-  console.log(req.body);
 
   let photos;
   let itemImage;
@@ -2643,7 +2718,6 @@ router.post('/removeImage', async (req, res) => {
 
 router.post('/removeImageFromBoardItem', async (req, res) => {
 
-  console.log(req.body);
   try {
 
     // let itemBoard = await schemas.ItemBoard.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
@@ -2701,7 +2775,6 @@ router.post('/getAttentionsTypes', async (req, res) => {
 
 router.post('/createRole', async (req, res) => {
 
-  console.log(req.body);
   try {
     let role = new schemas.Role({
       name: req.body.name,
@@ -2755,7 +2828,6 @@ router.post('/restoreRole', async (req, res) => {
 
 router.post('/updateRole', async (req, res) => {
   try {
-    console.log(req.body);
     schemas.Role.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         name: req.body.name,
@@ -2774,58 +2846,60 @@ router.post('/updateRole', async (req, res) => {
 
 router.post('/listNotifications', authMiddleware, async (req, res) => {
 
-  console.log("----------------- listNotifications -------------------")
-  console.log(req.body);
 
-  console.log(req.decoded);
-
-  let rolesAllowed = ["5a046fe9627e3526802b3848", "5a046fe9627e3526802b3847"];
   let notifications = [];
-  if (rolesAllowed.includes(req.decoded.role)) {
 
-    attentionPending = await schemas.Attention.find({ statusSend: { $in: ['send', 'resend'] }, customer: req.decoded.id })
-    attentionPending.map(attention => {
-      let status = '';
-      switch (attention.statusSend) {
-        case "send":
-          status = "Enviada";
-          break;
-        case "resend":
-          status = "Reenviada";
-          break;
+  switch (req.currentUser.role.tag) {
+    case "administrator":
+    case "technical":
+    case "ati":
+      attentionPending = await schemas.Attention.find({ statusSend: { $in: ['send', 'resend'] }, customer: req.currentUser.id })
+      attentionPending.map(attention => {
+        let status = '';
+        switch (attention.statusSend) {
+          case "send":
+            status = "Enviada";
+            break;
+          case "resend":
+            status = "Reenviada";
+            break;
 
-      }
-      let notification = {
-        id: attention._id,
-        _id: attention._id,
-        created_at: Date(),
-        type: 'feature',
-        status,
-        title: `Atención ${attention.description} Pendiente por Aprobar`
-      }
-      notifications.push(notification)
-    })
+        }
+        let notification = {
+          id: attention._id,
+          _id: attention._id,
+          created_at: Date(),
+          type: 'feature',
+          status,
+          title: `Atención ${attention.description} Pendiente por Aprobar`
+        }
+        notifications.push(notification)
+      })
 
-    requests = await schemas.Request.find({ status: { $in: ['created', 'reject'] } })
-    requests.map(request => {
+      requests = await schemas.Request.find({ status: { $in: ['created', 'reject'] } })
+      requests.map(request => {
 
-      let notification = {
-        id: request._id,
-        _id: request._id,
-        created_at: Date(),
-        type: 'requests',
-        status: "Creado",
-        title: `Solicitud ${request.description} Pendiente por Aprobar`
-      }
-      notifications.push(notification)
-    })
+        let notification = {
+          id: request._id,
+          _id: request._id,
+          created_at: Date(),
+          type: 'requests',
+          status: "Creado",
+          title: `Solicitud ${request.description} Pendiente por Aprobar`
+        }
+        notifications.push(notification)
+      })
+      break;
+
+    default:
+      break
   }
+
   res.json({ status: 'success', notifications });
 });
 
 router.post('/reportAttention', async (req, res) => {
 
-  console.log(req.body);
   let { start, end, paginate, startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
 
 
@@ -2941,7 +3015,6 @@ router.post('/printReportAttention', async (req, res) => {
     shortid: 'HklnmnRtb9',
     data
   }).then(function (response) {
-    console.log(response.data);
     res.json({
       status: 'success',
       data: response.data,
@@ -2953,10 +3026,11 @@ router.post('/printReportAttention', async (req, res) => {
   })
 });
 
-router.post('/requestReport', authMiddleware, async (req, res) => {
+router.post('/requestsReport', authMiddleware, async (req, res) => {
 
-  console.log(req.body);
+  let { order, status, start, end, requestType, customer, centerOfAttention } = req.body
 
+  let dates = fn.getDates(start, end)
   var query = schemas.Request.find()
     .select()
     .populate("request_type")
@@ -2964,34 +3038,142 @@ router.post('/requestReport', authMiddleware, async (req, res) => {
     .populate("centerOfAttention")
   let queryCount = schemas.Request.countDocuments();
 
+  query.where('date').gte(dates.start).lte(dates.end);
+  if (requestType) {
+    query.where('request_type').equals(mongoose.Types.ObjectId(requestType));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (status && status.key != '-1') {
+    query.where({ "status": status.key });
+  }
   let requests = await query.exec();
   res.json({ status: 'success', requests, message: "Success" });
 
 })
+router.post('/requestReportExcel', authMiddleware, async (req, res) => {
 
+  let { order, status, start, end, requestType, customer, centerOfAttention } = req.body
 
-router.post('/printRequest', async (req, res) => {
+  var workbook = new excel.Workbook();
 
-  let { startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
+  var worksheet = workbook.addWorksheet('Reporte de solicitudes');
+  var style = workbook.createStyle({
+    font: {
+      color: '#000000',
+      size: 12
+    },
+    bold: true,
+  });
+  worksheet.cell(1, 1).string('FECHA').style(style);
+  worksheet.cell(1, 2).string('#').style(style);
+  worksheet.cell(1, 3).string('CREADOR').style(style);
+  worksheet.cell(1, 4).string('CLIENTE').style(style);
+  worksheet.cell(1, 5).string('DESCRIPCIÓN').style(style);
+  worksheet.cell(1, 6).string('TIPO').style(style);
+  worksheet.cell(1, 7).string('CENTRO DE ATENCIÓN').style(style);
+  worksheet.cell(1, 8).string('ESTADO').style(style);
 
-
-  request = await schemas.Request.findById(request._id)
+  let dates = fn.getDates(start, end)
+  var query = schemas.Request.find()
+    .select()
     .populate("request_type")
     .populate("user")
     .populate("centerOfAttention")
+    .populate("customer")
+    .populate({
+      path: "descriptions",
+      populate: [{ path: 'user' }]
+    })
+  query.where('date').gte(dates.start).lte(dates.end);
+  if (requestType) {
+    query.where('request_type').equals(mongoose.Types.ObjectId(requestType));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (status && status.key != '-1') {
+    query.where({ "status": status.key });
+  }
+  let requests = await query.exec();
+
+  style = workbook.createStyle({
+    font: {
+      color: '#000000',
+      size: 12
+    },
+  });
+  let row = 2;
+  requests.map(request => {
+    worksheet.cell(row, 1).date(request.date.toString()).style(style);
+    worksheet.cell(row, 2).string(request.number.toString()).style(style);
+    worksheet.cell(row, 3).string(request.user.name).style(style);
+    worksheet.cell(row, 4).string(request.customer.name).style(style);
+    worksheet.cell(row, 5).string(request.description).style(style);
+    worksheet.cell(row, 6).string(request.request_type.type).style(style);
+    worksheet.cell(row, 7).string(request.centerOfAttention.title).style(style);
+    worksheet.cell(row, 8).string(request.status).style(style);
+
+    row++;
+  })
+  await workbook.write('./excel/report.xlsx', "");
+  var interval = setInterval(() => {
+    if (fs.existsSync('./excel/report.xlsx')) {
+      const fs = require('fs');
+      const contents = fs.readFileSync('./excel/report.xlsx', { encoding: 'base64' });
+      res.json({ status: "success", "base64": contents });
+      clearInterval(interval);
+    }
+  }, 1000);
+
+
+})
+router.post('/printRequest', async (req, res) => {
+
+  let { id } = req.body;
+  requests = await schemas.Request.findById(id)
+    .populate("request_type")
+    .populate("user")
+    .populate("centerOfAttention")
+    .populate({
+      path: "descriptions",
+      populate: [{ path: 'user' }]
+    })
   let data = {
-    attentions: attentions,
+    request: request,
     total: 1000,
   }
+  console.log(JSON.stringify(data, null, 6))
 
   axios.post(`${config.jsReportClient}reports`, {
-    shortid: 'HklnmnRtb9',
+    shortid: 'Hyl9fp6c25',
     data
   }).then(function (response) {
-    console.log(response.data);
+    // console.log(response.data)
     res.json({
       status: 'success',
-      data: response.data,
+      base64: response.data,
       message: 'Documento generado exitosamente'
     });
 
@@ -2999,6 +3181,288 @@ router.post('/printRequest', async (req, res) => {
     console.log("error", error);
   })
 });
+router.post('/printRequests', async (req, res) => {
+
+  let { order, status, start, end, requestType, customer, centerOfAttention } = req.body
+  let dates = fn.getDates(start, end)
+
+  var query = schemas.Request.find()
+    .select()
+    .populate("request_type")
+    .populate("user")
+    .populate("centerOfAttention")
+    .populate("customer")
+    .populate({
+      path: "descriptions",
+      populate: [{ path: 'user' }]
+    })
+
+  query.where('date').gte(dates.start).lte(dates.end);
+  if (requestType) {
+    query.where('request_type').equals(mongoose.Types.ObjectId(requestType));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (status && status.key != '-1') {
+    query.where({ "status": status.key });
+  }
+
+  let requests = await query.exec();
+  let data = {
+    requests: requests,
+    total: 1000,
+  }
+
+  axios.post(`${config.jsReportClient}reports`, {
+    shortid: 'WaIAVAU',
+    data
+  }).then(function (response) {
+    res.json({
+      status: 'success',
+      base64: response.data,
+      message: 'Documento generado exitosamente'
+    });
+
+  }).catch(function (error) {
+    console.log("error", error);
+  })
+});
+
+
+router.post('/attentionsReport', authMiddleware, async (req, res) => {
+
+  let { order, status, start, end, attentionType, customer, centerOfAttention } = req.body
+
+
+  let dates = fn.getDates(start, end)
+  let query = schemas.Attention.find()
+    .populate({
+      path: 'attentionItems',
+      populate: [{
+        path: "item"
+      }]
+    }).populate({
+      path: 'customer',
+    }).populate({
+      path: 'creator',
+    }).populate({
+      path: 'attentionType',
+    }).populate({
+      path: 'centerOfAttention',
+    })
+  // .populate({
+  //   path: 'descriptions',
+  //   populate: [{
+  //     path: "customer"
+  //   }]
+  // });
+  let queryCount = schemas.Attention.countDocuments();
+
+  query.where('date').gte(dates.start).lte(dates.end);
+  if (attentionType) {
+    query.where('attentionType').equals(mongoose.Types.ObjectId(attentionType));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (status && status.key != '-1') {
+    query.where({ "status": status.key });
+  }
+  let attentions = await query.exec();
+  res.json({ status: 'success', attentions, message: "Success" });
+
+})
+router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
+  let { order, status, start, end, attentionType, customer, centerOfAttention } = req.body
+
+  let dates = fn.getDates(start, end)
+  let query = schemas.Attention.find()
+    .populate({
+      path: 'attentionItems',
+      populate: [{
+        path: "item"
+      }]
+    }).populate({
+      path: 'customer',
+    }).populate({
+      path: 'creator',
+    }).populate({
+      path: 'attentionType',
+    }).populate({
+      path: 'centerOfAttention',
+    })
+  // .populate({
+  //   path: 'descriptions',
+  //   populate: [{
+  //     path: "customer"
+  //   }]
+  // });
+  let queryCount = schemas.Attention.countDocuments();
+
+  query.where('date').gte(dates.start).lte(dates.end);
+  if (attentionType) {
+    query.where('attentionType').equals(mongoose.Types.ObjectId(attentionType));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (status && status.key != '-1') {
+    query.where({ "status": status.key });
+  }
+
+  let attentions = await query.exec();
+
+
+  var workbook = new excel.Workbook();
+
+  var worksheet = workbook.addWorksheet('Reporte de solicitudes');
+  var style = workbook.createStyle({
+    font: {
+      color: '#000000',
+      size: 12
+    },
+    bold: true,
+  });
+  worksheet.cell(1, 1).string('FECHA').style(style);
+  worksheet.cell(1, 2).string('#').style(style);
+  worksheet.cell(1, 3).string('CREADOR').style(style);
+  worksheet.cell(1, 4).string('CLIENTE').style(style);
+  worksheet.cell(1, 5).string('DESCRIPCIÓN').style(style);
+  worksheet.cell(1, 6).string('TIPO').style(style);
+  worksheet.cell(1, 7).string('CENTRO DE ATENCIÓN').style(style);
+  worksheet.cell(1, 8).string('ESTADO').style(style);
+
+  style = workbook.createStyle({
+    font: {
+      color: '#000000',
+      size: 12
+    },
+  });
+  let row = 2;
+  attentions.map(attention => {
+    worksheet.cell(row, 1).date(attention.date.toString()).style(style);
+    worksheet.cell(row, 2).string(attention.number.toString()).style(style);
+    worksheet.cell(row, 3).string(attention.creator ? attention.creator.name : '').style(style);
+    worksheet.cell(row, 4).string(attention.customer.name).style(style);
+    worksheet.cell(row, 5).string(attention.description).style(style);
+    worksheet.cell(row, 6).string(attention.attentionType.type).style(style);
+    worksheet.cell(row, 7).string(attention.centerOfAttention ? attention.centerOfAttention.title : '').style(style);
+    worksheet.cell(row, 8).string(attention.status).style(style);
+    row++;
+  })
+  await workbook.write('./excel/report.xlsx', "");
+  var interval = setInterval(() => {
+    if (fs.existsSync('./excel/report.xlsx')) {
+      const fs = require('fs');
+      const contents = fs.readFileSync('./excel/report.xlsx', { encoding: 'base64' });
+      res.json({ status: "success", "base64": contents });
+      clearInterval(interval);
+    }
+  }, 1000);
+
+
+})
+router.post('/attentionsReportPdf', async (req, res) => {
+
+  let { order, status, start, end, attentionType, customer, centerOfAttention } = req.body
+
+  let dates = fn.getDates(start, end)
+  let query = schemas.Attention.find()
+    .populate({
+      path: 'attentionItems',
+      populate: [{
+        path: "item"
+      }]
+    }).populate({
+      path: 'customer',
+    }).populate({
+      path: 'creator',
+    }).populate({
+      path: 'attentionType',
+    }).populate({
+      path: 'centerOfAttention',
+    })
+  // .populate({
+  //   path: 'descriptions',
+  //   populate: [{
+  //     path: "customer"
+  //   }]
+  // });
+  let queryCount = schemas.Attention.countDocuments();
+
+  query.where('date').gte(dates.start).lte(dates.end);
+  if (attentionType) {
+    query.where('attentionType').equals(mongoose.Types.ObjectId(attentionType));
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (status && status.key != '-1') {
+    query.where({ "status": status.key });
+  }
+
+  let attentions = await query.exec();
+
+  let data = {
+    attentions,
+    total: 1000,
+  }
+
+  axios.post(`${config.jsReportClient}reports`, {
+    shortid: 'HklnmnRtb9',
+    data
+  }).then(function (response) {
+    res.json({
+      status: 'success',
+      base64: response.data,
+      message: 'Documento generado exitosamente'
+    });
+
+  }).catch(function (error) {
+    console.log("error", error);
+  })
+})
 
 
 module.exports = router;

@@ -75,15 +75,15 @@ const fileExtension = fileName => {
     return fileName.slice((fileName.lastIndexOf(".") - 1 >>> 0) + 2);
 }
 
-const sendEmailProject = id => {
+const sendEmailMaintenance = id => {
 
 
     return new Promise(async (resolve, reject) => {
         try {
 
 
-            let project = await schemas.Project.findById(mongoose.Types.ObjectId(id));
-            let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(project.customer));
+            let maintenance = await schemas.Maintenance.findById(mongoose.Types.ObjectId(id));
+            let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(maintenance.customer));
 
             const HummusRecipe = require('hummus-recipe');
             const pdfDoc = new HummusRecipe(`./pdf/${id}.pdf`, `./pdf/${id}.pdf`);
@@ -95,7 +95,7 @@ const sendEmailProject = id => {
             }).endPDF();
 
             let link = `${config.urlPdf}${id}.pdf`;
-            mailer.emailProject(customer, project, link);
+            mailer.emailMaintenance(customer, maintenance, link);
 
             resolve(true);
 
@@ -171,9 +171,9 @@ const validateBoard = board => {
     return errors > 0;
 }
 
-const validateProject = project => {
+const validateMaintenance = maintenance => {
     let errors = 0;
-    project.boards.forEach(board => {
+    maintenance.boards.forEach(board => {
         board.itemsBoards.forEach(itemBoard => {
             if (itemBoard.photos.length == 0) {
                 errors++;
@@ -234,92 +234,100 @@ const semiAnnualMaintenance = () => {
 
     return new Promise(async (resolve, reject) => {
         try {
-            let configurations = await schemas.Configuration.find();
             let result = await schemas.CenterOfAttention.aggregate([{
                 $project: {
-                    statusProvisioningAlertDate: 1,
+                    valueSemiAnnual: 1,
+                    valueProvisioning: 1,
                     provisioningAlertDate: 1,
                     expirationDateMaintenance: 1,
                     statusExpirationDateMaintenance: 1,
-                    statusExpirationDateMaintenance: 1,
-                    remainingExpirationDateMaintenanceDays: {
-                        $trunc: {
-                            $divide: [{ $subtract: ['$expirationDateMaintenance', new Date()] }, 1000 * 60 * 60 * 24]
+                    statusProvisioningAlertDate: 1,
+                    timeSemiAnnual: 1,
+                    timeProvisioning: 1,
+                    remainingExpiratioDateMaintenanceDays: {
+                        $dateDiff: {
+                            startDate: "$$NOW",
+                            endDate: "$expirationDateMaintenance",
+                            unit: "$timeSemiAnnual"
                         }
                     },
                     remainingProvisioningAlertDays: {
-                        $trunc: {
-                            $divide: [{ $subtract: ['$provisioningAlertDate', new Date()] }, 1000 * 60 * 60 * 24]
+                        $dateDiff: {
+                            startDate: "$$NOW",
+                            endDate: "$provisioningAlertDate",
+                            unit: "$timeProvisioning"
                         }
                     }
                 }
             },
             ]).exec();
 
-            console.log('result', result);
-            console.log('\n\n\n\n\n\n');
 
             let status = true
             if (result.length > 0 && status) {
-                // let remainingDays = result[0].remainingDays;
-                // let provisioningAlertDate = result[0].provisioningAlertDate;
-                // let statusProvisioningAlertDate = result[0].statusProvisioningAlertDate;
 
-                let {
-                    provisioningAlertDate,
-                    expirationDateMaintenance,
-                    statusProvisioningAlertDate,
-                    statusExpirationDateMaintenance,
-                    remainingExpirationDateMaintenanceDays,
-                    remainingProvisioningAlertDays
-                } = result[0]
-                // provisioningAlertDate: 2023-01-30T05:00:00.000Z,
+                // valueSemiAnnual: 5,
+                // valueProvisioning: 2,
+                // timeSemiAnnual: 'minute',
+                // timeProvisioning: 'hour',
+                // expirationDateMaintenance: 2022-07-29 23:37:19,
+                // provisioningAlertDate:     2022-07-29 23:37:19,
                 // statusProvisioningAlertDate: 'pending',
                 // statusExpirationDateMaintenance: 'pending',
-                // remainingExpirationDateMaintenanceDays: 40,
-                // remainingprovisioningAlertDays: 254
+                // remainingExpiratioDateMaintenanceDays: 129,
+                // remainingProvisioningAlertDays: 2
 
+                let {
+                    _id,
+                    valueSemiAnnual,
+                    valueProvisioning,
+                    statusProvisioningAlertDate,
+                    statusExpirationDateMaintenance,
+                    remainingExpiratioDateMaintenanceDays,
+                    remainingProvisioningAlertDays,
+                } = result[0]
+
+                let maintenance = {}
+                if (statusProvisioningAlertDate == 'pending' && remainingProvisioningAlertDays < valueProvisioning) {
+                    console.log("*************** Uno *************************")
+                    maintenance = await
+                        schemas.Maintenance
+                            .findOne({ centerOfAttention: mongoose.Types.ObjectId(_id) })
+                            .populate("customer")
+                    console.log(maintenance)
+
+                    let emails = await getEmailNotification(maintenance.customer._id)
+                    emails = emails.map(email => email.email)
+                    console.log(emails.join(","))
+                    console.log(emails)
+
+                    mailer.emailProvisioning(maintenance, emails)
+                    changeStatusProvisioning(maintenance, _id,)
+
+                }
+                if (statusExpirationDateMaintenance == 'pending' && remainingExpiratioDateMaintenanceDays < valueSemiAnnual) {
+                    console.log("*************** Dos *************************")
+                    maintenance =
+                        await schemas.Maintenance
+                            .findOne({ centerOfAttention: mongoose.Types.ObjectId(_id) })
+                            .populate("customer")
+
+                    let emails = await getEmailNotification(maintenance.customer._id)
+                    emails = emails.map(email => email.email)
+                    console.log(emails.join(","))
+                    console.log(emails)
+                    mailer.emailSemiAnnual(maintenance, emails)
+                    // changeStatusExpirationMaintenance(maintenance, _id)
+
+                }
                 // Contabilidad usuario de toda tienda
                 // 1 un mes antes de vencer el mantenimiento se le envia un correo al oset de cadata tienda 
                 // informandole que debe aprovisonar 6.000.000 de pesos
-                asyncForEach(configurations, async (configuration) => {
-
-                    console.log('__________________________________________________');
-                    console.log('configuration.value ', configuration.value);
-                    console.log('configuration.key ', configuration.key);
-                    console.log('__________________________________________________');
-
-                    switch (configuration.key) {
-                        case 'provisioningAlert':
-                            if (configuration.value == remainingProvisioningAlertDays) {
-                                if (statusProvisioningAlertDate === 'pending') {
-                                    sendMailProvisioningAlert(provisioningAlertDate, result[0]._id);
-                                }
-                            }
-                            break;
-
-                        case 'expirationDateMaintenance':
-                            if (configuration.value == remainingExpirationDateMaintenanceDays) {
-                                if (statusExpirationDateMaintenance === 'pending') {
-                                    sendMailExpirationDateMaintenance(expirationDateMaintenance, result[0]._id);
-                                }
-                            }
-                            break;
-                    }
-                    console.log('\n');
-                    // Enviar email al oset y jefe de mantenimiento 
-                    // avisandole que el mantenimiento se va a vencer
-
-                });
-
+                // Enviar email al oset y jefe de mantenimiento 
+                // avisandole que el mantenimiento se va a vencer
                 // Mantenimientos correctivos
-
-
-                // mailer.emailProject(customer, project, link);
             }
-
             resolve(true);
-
         } catch (error) {
             console.log(error);
             reject({
@@ -330,7 +338,51 @@ const semiAnnualMaintenance = () => {
     });
 }
 
-const changeStatusProvisioningAlert = (id) => {
+const getEmailNotification = customer => {
+
+    return new Promise(async (resolve, _) => {
+        let emails = await schemas.User.aggregate([{
+            $match: {
+                'customer': mongoose.Types.ObjectId(customer)
+            }
+        }, {
+            $project: {
+                name: 1,
+                email: 1,
+                role: 1,
+            }
+        }, {
+            $lookup: {
+                from: "roles",
+                localField: "role",
+                foreignField: "_id",
+                as: "role"
+            }
+        }, {
+            $unwind: { path: "$role" }
+        },
+        {
+            $match:
+            {
+                "role.tag": {
+                    $in: ["construction_manager", "maintenance_manager", "oset"]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                email: 1
+            }
+        }])
+
+        resolve(emails);
+    })
+
+
+}
+
+const changeStatusProvisioning = (maintenance, id) => {
     schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
         $set: {
             statusProvisioningAlertDate: 'send',
@@ -340,14 +392,24 @@ const changeStatusProvisioningAlert = (id) => {
     }).exec();
 }
 
-const changeStatusExpirationMaintenance = (id) => {
-    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-        $set: {
-            statusExpirationDateMaintenance: 'send',
-        }
-    }, {
-        multi: true
-    }).exec();
+const changeStatusExpirationMaintenance = (maintenance, id) => {
+    if (maintenance.statusPayment == 'paid') {
+        schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+            $set: {
+                statusExpirationDateMaintenance: 'send',
+            }
+        }, {
+            multi: true
+        }).exec();
+
+        schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+            $set: {
+                status: 'finished',
+            }
+        }, {
+            multi: true
+        }).exec();
+    }
 }
 
 const sendMailProvisioningAlert = (provisioningAlertDate, id) => {
@@ -425,19 +487,49 @@ const addDateToExpirationDateMaintenance = (expirationDateMaintenance, id) => {
         multi: true
     }).exec();
 }
+const getDates = (start, end) => {
+
+    let newStart = ''
+    let newEnd = ''
+    if (start && end) {
+        let parts = start.toString().split(" ")
+        newStart = `${parts[0]} 00:00:00`
+        parts = end.toString().split(' ')
+        newEnd = `${parts[0]} 23:59:59`
+    }
+    else if (start) {
+        let parts = start.toString().split(" ")
+        newStart = `${parts[0]} 00:00:00`
+        newEnd = `${parts[0]} 23:59:59`
+    }
+    return {
+        start: newStart,
+        end: newEnd
+    }
+}
+const formatDate = (date) => {
+    let current_datetime = new Date(date)
+
+    let day = current_datetime.getDay() <= 10 ? '0' + current_datetime.getDay() : current_datetime.getDay()
+    let formatted_date = current_datetime.getFullYear() + "/" + current_datetime.getMonth() + "/" + day
+    return formatted_date
+}
 module.exports = {
+    formatDate,
+    getDates,
     createToken,
     createRefreshToken,
     asyncForEach,
     verifyItemBoard,
     makedId,
     fileExtension,
-    sendEmailProject,
+    sendEmailMaintenance,
     sendEmailAttention,
     validateAttention,
     validateBoard,
     getDateReport,
-    validateProject,
+    validateMaintenance,
     getChildrens,
-    semiAnnualMaintenance
+    semiAnnualMaintenance,
+    getEmailNotification,
 };

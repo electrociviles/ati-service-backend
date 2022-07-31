@@ -10,9 +10,9 @@ authMiddleware.use((req, res, next) => {
         const token = authHeader.split(' ')[1];
         jwt.verify(token, process.env.SECRET, (err, decoded) => {
             if (err) {
-                return res.status(401).json({ status: 'err', message: 'jwt expired', err });
+                return res.status(401).json({ status: 'error', message: 'jwt expired', err });
             } else {
-                req.decoded = decoded;
+                req.currentUser = decoded;
                 next();
             }
         });

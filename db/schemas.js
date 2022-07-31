@@ -21,7 +21,6 @@ else {
     })
 }
 
-
 const bcrypt = require("bcrypt");
 
 var CustomerSchema = new mongoose.Schema({
@@ -48,6 +47,7 @@ var UserSchema = new mongoose.Schema({
     centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
     token: String,
     refreshToken: String,
+    tokenFCM: String,
     status: String,
     phone: String,
 });
@@ -69,7 +69,7 @@ UserSchema.pre('save', async function (next) {
 
 var User = mongoose.model('User', UserSchema);
 
-var ProjectSchema = new mongoose.Schema({
+var MaintenanceSchema = new mongoose.Schema({
     name: String,
     type: String,
     observation: String,
@@ -80,12 +80,16 @@ var ProjectSchema = new mongoose.Schema({
     outletSampling: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     emergencylight: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     upsAutonomy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
+    centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
+    status: String,
+    statusPayment: String
+
 });
-var Project = mongoose.model('Project', ProjectSchema);
+var Maintenance = mongoose.model('Maintenance', MaintenanceSchema);
 
 
 var ItemImageSchema = new mongoose.Schema({
-    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    maintenance: { type: mongoose.Schema.Types.ObjectId, ref: 'Maintenance' },
     item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
     photos: [],
     hasHour: Boolean,
@@ -132,7 +136,7 @@ var ItemBoard = mongoose.model('Item_Board', ItemBoardSchema);
 var BoardSchema = new mongoose.Schema({
     name: String,
     type: String,
-    project: { type: mongoose.Schema.Types.ObjectId, ref: 'Project' },
+    maintenance: { type: mongoose.Schema.Types.ObjectId, ref: 'Maintenance' },
     itemsBoards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Board' }],
     status: String,
     observation: String,
@@ -155,6 +159,7 @@ const AttentionDescriptionSchema = new mongoose.Schema({
 const AttentionDescription = mongoose.model('attention_description', AttentionDescriptionSchema)
 
 var AttentionSchema = new mongoose.Schema({
+    number: Number,
     attentionItems: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     title: String,
     description: String,
@@ -227,6 +232,7 @@ const RequestDescriptionSchema = new mongoose.Schema({
 const RequestDescription = mongoose.model('request_description', RequestDescriptionSchema)
 
 const RequestSchema = new mongoose.Schema({
+    number: Number,
     description: String,
     request_type: { type: mongoose.Schema.Types.ObjectId, ref: 'request_type' },
     centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
@@ -246,6 +252,10 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     maintenanceCost: mongoose.Schema.Types.Double,
+    valueSemiAnnual: Number,
+    timeSemiAnnual: String,
+    valueProvisioning: Number,
+    timeProvisioning: String,
     expirationDateMaintenance: Date,
     statusExpirationDateMaintenance: String,
     provisioningAlertDate: Date,
@@ -265,7 +275,7 @@ const Configuration = mongoose.model('configuration', ConfigurationSchema)
 var schemas = {
     Customer,
     Board,
-    Project,
+    Maintenance,
     Item,
     ItemBoard,
     User,

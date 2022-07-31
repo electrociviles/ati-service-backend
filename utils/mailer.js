@@ -1,26 +1,30 @@
-exports.emailProject = (customer, project, link) => {
+const emailSender = "informes@atiservicios.com";
+
+exports.emailMaintenance = (maintenance, link) => {
     var nodemailer = require("nodemailer");
     nodemailer.createTestAccount((err, account) => {
 
         let transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'mail.privateemail.com',
+            port: 465,
+            secureConnection: true,
             auth: {
-                user: "informeselectrociviles@gmail.com",
-                pass: "Electrociviles2022"
+                user: "informes@atiservicios.com",
+                pass: "Ati2022#*"
             }
         });
 
         let html = `
-        <h2>Hola ${customer.name}</h2>
-        <p>El proyecto <b>${project.name}</b> fue cerrado exitosamente para mas información</p>
+        <h2>Hola ${maintenance.customer.name}</h2>
+        <p>El proyecto <b>${maintenance.name}</b> fue cerrado exitosamente para mas información</p>
         <p>
             Para ver el resumen de los tableros por favor visite el siguiente enlace: <br /><br />
             ${link}
         </p>
         </div>`
         let mailOptions = {
-            from: `"Cierre de tablero" <${customer.email}>`,
-            to: customer.email,
+            from: `"Cierre de tablero" <${maintenance.customer.email}>`,
+            to: maintenance.customer.email,
             subject: '📎',
             html,
         }
@@ -82,6 +86,77 @@ exports.emailAttention = (attention, attachments) => {
             html,
         }
         console.log(attention.customer.email);
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                return console.log(error);
+            }
+            console.log('Message sent: %s', info.messageId);
+            console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+        })
+
+    })
+}
+exports.emailSemiAnnual = (maintenance, emails) => {
+    var nodemailer = require("nodemailer");
+    nodemailer.createTestAccount((err, account) => {
+
+        let transporter = nodemailer.createTransport({
+            host: 'mail.privateemail.com',
+            port: 465,
+            secureConnection: true,
+            auth: {
+                user: "informes@atiservicios.com",
+                pass: "Ati2022#*"
+            }
+        });
+
+        let html = `
+        <h2>Hola ${maintenance.customer.name}</h2>
+        <p>El mantenimiento ${maintenance.name} semestral ha finalizado</p>
+         
+        </div>`
+        let mailOptions = {
+            from: `"Finalizacion de mantenimiento" <${emailSender}>`,
+            to: emails,
+            subject: '📎',
+            html,
+        }
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                return console.log(error);
+            }
+            console.log('Message sent: %s', info.messageId);
+            console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+        })
+
+    })
+}
+exports.emailProvisioning = (maintenance, emails) => {
+    var nodemailer = require("nodemailer");
+    nodemailer.createTestAccount((err, account) => {
+
+        let transporter = nodemailer.createTransport({
+            host: 'mail.privateemail.com',
+            port: 465,
+            secureConnection: true,
+            auth: {
+                user: emailSender,
+                pass: "Ati2022#*"
+            }
+        });
+
+        let html = `
+        <h2>Hola ${maintenance.customer.name}</h2>
+        <p>No te olvides de hacer el aprovisionamiento del mantenimiento ${maintenance.name} </p> 
+        </div>`
+        let mailOptions = {
+            from: `"Alerta de aprovisionamiento" <${emailSender}>`,
+            to: emails,
+            subject: '📎',
+            html,
+        }
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {

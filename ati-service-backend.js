@@ -6,15 +6,19 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var cors = require('cors')
-
+const http = require('http');
+const socketIO = require('socket.io');
 var indexRouter = require('./routes/index');
 var apiRouter = require('./routes/api');
 var init = require('./config/init');
 const fn = require('./utils/fn');
 var config = require('./config')
 var cron = require('node-cron')
-
+const jwt_decode = require("jwt-decode");
 var app = express();
+var schemas = require("./db/schemas");
+const notification = require('./utils/notification');
+
 
 app.use(cors({
   origin: config.origins,
@@ -30,6 +34,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'pdf')));
+app.use(express.static(path.join(__dirname, 'excel')));
 
 app.use('/', indexRouter);
 app.use('/api', apiRouter);
@@ -52,13 +57,34 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
-app.listen(config.port, function () {
-  console.log(`Escuchando el puerto ${config.port}!`);
+// let cronProcess = {
+//   semiAnnualMaintenance: {
+//     status: true,
+//     // times: '*/5 * * * * *'
+//     times: '*/5 * * * * *'
+//   }
+// }
+// cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {
+//   if (cronProcess.semiAnnualMaintenance.status) {
+//     console.log(new Date());
+//     fn.semiAnnualMaintenance()
+//   }
+// })
 
+
+
+
+
+const server = http.Server(app);
+const io = socketIO(server)
+var nsp = io.of(config.namespace)
+
+server.listen(config.port, function () {
+  console.log(`Escuchando el puerto ${config.port}!`);
   // init.Start();
   // init.createUser();
   // init.createCustomer();
-  // init.createProject();
+  // init.createMaintenances();
   // init.createRole();
   // init.createMenuWeb();
   // init.createMenuMobile();
@@ -68,22 +94,83 @@ app.listen(config.port, function () {
   // init.UpdateProjectSetNewItems();
   // init.NewItem();
   // init.createRequestType();
+  // fn.getEmailNotification("622cc6452958c3c61299998a").then(emails => {
+  //   console.log(emails)
+  //   emails = emails.map(email => email.email)
+  //   console.log(emails.join(","))
+
+  // })
 
 });
+nsp.on('connection', socket => {
+  if (socket.handshake.query.token !== "null" || socket.handshake.headers.token !== "null") {
+    let user = jwt_decode(socket.handshake.query.token ? socket.handshake.query.token : socket.handshake.headers.token)
+    console.log(user);
+    socket.join(user.id)
+    socket.join(user.username)
+    socket.join(user.role.tag)
+    console.log('--------------------------------------')
+    console.log('Cliente connected : ' + socket.id)
+    console.log('--------------------------------------\n')
+  }
+  socket.on('createRequest', async data => {
+
+    var adminUsers = await schemas.User.aggregate([{
+      $project: { username: 1, tokenFCM: 1, role: 1 }
+    }, {
+      $lookup: {
+        from: "roles",
+        localField: "role",
+        foreignField: "_id",
+        as: "role"
+      }
+    }, { $unwind: { path: "$role" } }, { $match: { "role.tag": "administrator" } }
+    ])
 
 
-let cronProcess = {
-  semiAnnualMaintenance: {
-    status: false,
-    // times: '*/5 * * * * *'
-    times: '*/5 * * * * *'
-  }
-}
-cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {
-  if (cronProcess.semiAnnualMaintenance.status) {
-    console.log(new Date());
-    fn.semiAnnualMaintenance()
-  }
+    switch (data.user.role.tag) {
+      case 'administrator':
+      case 'technical':
+
+        var foundUsers = await schemas.User.find().where('_id').in(data.centerOfAttention.users);
+        var users = foundUsers.filter(user => user.tokenFCM);
+        var tokens = users.map(user => user.tokenFCM);
+
+        var usernames = adminUsers.map(user => user.username);
+
+
+        setTimeout(() => {
+
+          console.log('usernames', usernames);
+          usernames.forEach(username => {
+            nsp.to(username).emit('onCreateRequest', {});
+
+          });
+          // notification.sendNotification(tokens, 'Solicitud creada', `[${data.request_type.type}] ${data.description}`, {});
+        }, 4000);
+
+        break;
+
+      default:
+
+        var users = adminUsers.filter(user => user.tokenFCM);
+        var ids = users.map(user => user.tokenFCM);
+
+        setTimeout(() => {
+          notification.sendNotification(ids, 'Solicitud creada', `[${data.request_type.type}] ${data.description}`, {});
+
+        }, 4000);
+        break;
+    }
+  })
+  socket.on('acceptRequest', async data => {
+    // console.log("::::::::::::::::::::::: Request ::::::::::::::::::::");
+    // console.log(data);
+  })
+  socket.on('updateMenu', async data => {
+    let role = await schemas.Role.findById(data.idrole);
+    nsp.to(role.tag).emit('onUpdateMenu', {});
+  })
+
 })
-
 module.exports = app;

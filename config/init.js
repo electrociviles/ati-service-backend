@@ -70,15 +70,15 @@ exports.NewItem = function () {
         console.log(error)
     });
 }
-exports.UpdateProjectSetNewItems = async function () {
-    let projects = await schemas.Project.find();
-    await fn.asyncForEach(projects, async project => {
+exports.UpdateMaintenanceSetNewItems = async function () {
+    let maintenances = await schemas.Maintenance.find();
+    await fn.asyncForEach(maintenances, async maintenance => {
 
 
         items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
         await fn.asyncForEach(items, async item => {
             let itemImage = schemas.ItemImage({
-                project: project._id,
+                maintenance: maintenance._id,
                 item: mongoose.Types.ObjectId(item._id),
                 status: 'activo',
                 photos: [],
@@ -87,12 +87,12 @@ exports.UpdateProjectSetNewItems = async function () {
             await itemImage.save();
             // emergencylight.push(itemImage);
         });
-        project.emergencylight = emergencylight;
+        maintenance.emergencylight = emergencylight;
 
         items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
         await fn.asyncForEach(items, async item => {
             let itemImage = schemas.ItemImage({
-                project: project._id,
+                maintenance: maintenance._id,
                 item: mongoose.Types.ObjectId(item._id),
                 status: 'activo',
                 photos: [],
@@ -103,7 +103,7 @@ exports.UpdateProjectSetNewItems = async function () {
             await itemImage.save();
             // upsAutonomy.push(itemImage);
         });
-        project.upsAutonomy = upsAutonomy;
+        maintenance.upsAutonomy = upsAutonomy;
 
 
     });
@@ -1010,15 +1010,14 @@ exports.createCustomer = function () {
     });
     customer.save();
 };
-exports.createProject = function () {
+exports.createMaintenance = function () {
 
-    var Project = schemas.Project;
-    var project = new Project({
+    var maintenance = new schemas.Maintenance.Maintenance({
         name: 'Mantenimineto Eléctrico Exito',
         type: 'tri',
         customer: mongoose.Types.ObjectId("6205505db6cd35211920a7a8"),
     });
-    project.save();
+    maintenance.save();
 };
 exports.createRole = function () {
     var list = new Array()
@@ -1136,7 +1135,7 @@ exports.createMenuWeb = () => {
     menu.pages.push(attention)
 
     /** Servicies */
-    var projects = new schemas.Page({
+    var maintenances = new schemas.Page({
         title: 'Mantenimientos',
         href: '/maintenances',
         icon: 'VscProject',
@@ -1144,8 +1143,8 @@ exports.createMenuWeb = () => {
         children: [],
         roles: ['5a046fe9627e3526802b3847']
     })
-    listPage.push(projects)
-    menu.pages.push(projects)
+    listPage.push(maintenances)
+    menu.pages.push(maintenances)
 
 
     // var maintenance = new schemas.Page({
