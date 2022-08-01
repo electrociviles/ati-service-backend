@@ -57,19 +57,19 @@ app.use(function (err, req, res, next) {
   res.render('error');
 });
 
-// let cronProcess = {
-//   semiAnnualMaintenance: {
-//     status: true,
-//     // times: '*/5 * * * * *'
-//     times: '*/5 * * * * *'
-//   }
-// }
-// cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {
-//   if (cronProcess.semiAnnualMaintenance.status) {
-//     console.log(new Date());
-//     fn.semiAnnualMaintenance()
-//   }
-// })
+let cronProcess = {
+  semiAnnualMaintenance: {
+    status: false,
+    // times: '*/5 * * * * *'
+    times: '*/5 * * * * *'
+  }
+}
+cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {
+  if (cronProcess.semiAnnualMaintenance.status) {
+    console.log(new Date());
+    fn.semiAnnualMaintenance()
+  }
+})
 
 
 

@@ -12,6 +12,36 @@ var colors = {
     transparent: "FFFFFF",
 };
 
+
+exports.DefaultCenterOfAttention = function () {
+    var CenterOfAttention = schemas.CenterOfAttention;
+    var list = new Array();
+
+    var item = {
+        title: req.body.name,
+        valueSemiAnnual,
+        valueProvisioning,
+        timeSemiAnnual,
+        timeProvisioning,
+        description: req.body.description,
+        maintenanceCost: req.body.maintenanceCost,
+        expirationDateMaintenance: date,
+        provisioningAlertDate: date,
+        statusProvisioningAlertDate: 'pending',
+        statusAlertDateMaintenance: 'pending',
+        customer: mongoose.Types.ObjectId(req.body.customer),
+        status: 'inactive',
+    };
+
+    list.push(item);
+
+    CenterOfAttention.insertMany(list).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+}
+
 /** Creacion parametros **/
 exports.NewItem = function () {
     var Item = schemas.Item;

@@ -126,8 +126,8 @@ router.post('/getMenu', async (req, res) => {
 router.post('/listMaintenances', authMiddleware, async (req, res) => {
 
   let { start, end } = req.body;
-  let queryCount = schemas.Maintenance.countDocuments();
-  var query = schemas.Maintenance.find().populate({
+  let queryCount = schemas.Maintenance.countDocuments({ status: 'active' });
+  var query = schemas.Maintenance.find({ status: 'active' }).populate({
     path: 'boards',
     populate: [{
       path: "itemsBoards",
@@ -694,28 +694,12 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
     console.log(request)
 
     if (ids.length > 0) {
-      setTimeout(() => {
-        notification.sendNotification(ids, `Solicitud ${statusRequest == 'accept' ? 'Aprobada' : 'Rechazada'}`, `[${request.request_type.type}] ${request.description}`, {});
-      }, 4000);
+      notification.sendNotification(ids, `Solicitud ${statusRequest == 'accept' ? 'Aprobada' : 'Rechazada'}`, `[${request.request_type.type}] ${request.description}`, {});
     }
 
-
-    // var requestDescription = schemas.RequestDescription({
-    //   description,
-    //   statu: statusRequest,
-    //   date: new Date(),
-    //   user: mongoose.Types.ObjectId(req.currentUser.id),
-    // })
-    // requestDescription.save();
-
-    // schemas.Request.updateOne({ _id: mongoose.Types.ObjectId(id) }, {
-    //   $set: {
-    //     status: statusRequest,
-    //   },
-    //   $push: { "descriptions": requestDescription._id },
-    // }, {
-    //   multi: true
-    // }).exec();
+    if (statusRequest === 'accept') {
+      fn.createAttention(request)
+    }
 
     let textMessage = 'aceptada';
     if (statusRequest == 'reject')
@@ -875,7 +859,7 @@ router.post('/updateObservationMaintenance', async (req, res) => {
     multi: true
   }).exec();
 
-  res.json({ status: 'success', message: 'Proyecto actualizado exitosamente' });
+  res.json({ status: 'success', message: 'Mantenimiento actualizado exitosamente' });
 });
 
 router.post('/updateObservationItem', async (req, res) => {
@@ -886,7 +870,7 @@ router.post('/updateObservationItem', async (req, res) => {
     multi: true
   }).exec();
 
-  res.json({ status: 'success', message: "Proyecto registrado exitosamente.", });
+  res.json({ status: 'success', message: "Mantenimiento registrado exitosamente.", });
 
 })
 
@@ -898,106 +882,121 @@ router.post('/updateTitleItem', async (req, res) => {
     multi: true
   }).exec();
 
-  res.json({ status: 'success', message: "Proyecto registrado exitosamente.", });
+  res.json({ status: 'success', message: "Mantenimiento registrado exitosamente.", });
+
+})
+
+router.post('/payMaintenance', async (req, res) => {
+
+  schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
+    $set: { statusPayment: 'paid' }
+  }, {
+    multi: true
+  }).exec();
+
+  res.json({ status: 'success', message: "Mantenimiento pagado exitosamente.", });
 
 })
 
 router.post('/createMaintenance', async (req, res) => {
 
-  try {
-    let aroundItems = [];
-    let outletSampling = [];
-    let emergencylight = [];
-    let upsAutonomy = [];
+  if (req.body.centerOfAttention) {
+    try {
+      let aroundItems = [];
+      let outletSampling = [];
+      let emergencylight = [];
+      let upsAutonomy = [];
 
-    let maintenance = new schemas.Maintenance({
-      name: req.body.name,
-      type: req.body.type,
-      observation: req.body.observation,
-      downloaded: false,
-      customer: mongoose.Types.ObjectId(req.body.customer),
-      status: "active",
-      centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention)
-    });
-
-    items = await schemas.Item.find({ mode: { $in: ['around'] } });
-    await fn.asyncForEach(items, async item => {
-      let itemImage = schemas.ItemImage({
-        maintenance: maintenance._id,
-        item: mongoose.Types.ObjectId(item._id),
-        status: 'activo',
-        photos: [],
-        value: 0.0,
-        percentBatery: 0.0,
-        hour: "",
-        hasHour: false
+      let maintenance = new schemas.Maintenance({
+        name: req.body.name,
+        type: req.body.type,
+        observation: req.body.observation,
+        downloaded: false,
+        price: req.body.price,
+        customer: mongoose.Types.ObjectId(req.body.customer),
+        status: "active",
+        centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention)
       });
-      await itemImage.save();
-      aroundItems.push(itemImage);
-    });
-    maintenance.aroundItems = aroundItems;
 
-
-    items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
-    await fn.asyncForEach(items, async item => {
-      let itemImage = schemas.ItemImage({
-        maintenance: maintenance._id,
-        item: mongoose.Types.ObjectId(item._id),
-        status: 'activo',
-        photos: [],
-        value: 0.0,
-        percentBatery: 0.0,
-        hour: "",
-        hasHour: false
+      items = await schemas.Item.find({ mode: { $in: ['around'] } });
+      await fn.asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+          maintenance: maintenance._id,
+          item: mongoose.Types.ObjectId(item._id),
+          status: 'activo',
+          photos: [],
+          value: 0.0,
+          percentBatery: 0.0,
+          hour: "",
+          hasHour: false
+        });
+        await itemImage.save();
+        aroundItems.push(itemImage);
       });
-      await itemImage.save();
-      outletSampling.push(itemImage);
-    });
-    maintenance.outletSampling = outletSampling;
+      maintenance.aroundItems = aroundItems;
 
-
-
-    items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
-    await fn.asyncForEach(items, async item => {
-      let itemImage = schemas.ItemImage({
-        maintenance: maintenance._id,
-        item: mongoose.Types.ObjectId(item._id),
-        status: 'activo',
-        photos: [],
-        value: 0.0,
-        percentBatery: 0.0,
-        hour: "",
-        hasHour: false
+      items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
+      await fn.asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+          maintenance: maintenance._id,
+          item: mongoose.Types.ObjectId(item._id),
+          status: 'activo',
+          photos: [],
+          value: 0.0,
+          percentBatery: 0.0,
+          hour: "",
+          hasHour: false
+        });
+        await itemImage.save();
+        outletSampling.push(itemImage);
       });
-      await itemImage.save();
-      emergencylight.push(itemImage);
-    });
-    maintenance.emergencylight = emergencylight;
+      maintenance.outletSampling = outletSampling;
 
-    items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
-    await fn.asyncForEach(items, async item => {
-      let itemImage = schemas.ItemImage({
-        maintenance: maintenance._id,
-        item: mongoose.Types.ObjectId(item._id),
-        status: 'activo',
-        photos: [],
-        value: 0.0,
-        percentBatery: 0.0,
-        hour: "",
-        hasHour: true
+      items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
+      await fn.asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+          maintenance: maintenance._id,
+          item: mongoose.Types.ObjectId(item._id),
+          status: 'activo',
+          photos: [],
+          value: 0.0,
+          percentBatery: 0.0,
+          hour: "",
+          hasHour: false
+        });
+        await itemImage.save();
+        emergencylight.push(itemImage);
       });
-      await itemImage.save();
-      upsAutonomy.push(itemImage);
-    });
-    maintenance.upsAutonomy = upsAutonomy;
+      maintenance.emergencylight = emergencylight;
+
+      items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
+      await fn.asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+          maintenance: maintenance._id,
+          item: mongoose.Types.ObjectId(item._id),
+          status: 'activo',
+          photos: [],
+          value: 0.0,
+          percentBatery: 0.0,
+          hour: "",
+          hasHour: true
+        });
+        await itemImage.save();
+        upsAutonomy.push(itemImage);
+      });
+      maintenance.upsAutonomy = upsAutonomy;
 
 
-    maintenance.save();
+      maintenance.save();
 
-    res.json({ status: 'success', message: "Proyecto registrado exitosamente.", maintenance, });
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error', message: error });
+      res.json({ status: 'success', message: "Mantenimiento registrado exitosamente.", maintenance, });
+    } catch (error) {
+      console.log(error)
+      res.json({ status: 'error', message: error });
+    }
+  } else {
+    res.json({ status: 'error', message: "Debe seleccionar un centro de atención" });
+
   }
 });
 
@@ -2135,7 +2134,6 @@ router.post('/updateTimeExpiration', async (req, res) => {
 
 router.post('/createCenterOfAttention', async (req, res) => {
 
-  console.log(req.body)
   let { valueSemiAnnual, valueProvisioning, timeSemiAnnual, timeProvisioning } = req.body;
   let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': req.body.title })
   if (!centerOfAttention) {
@@ -2382,7 +2380,7 @@ router.post('/saveObservations', async (req, res) => {
     }, {
       multi: true
     }).exec();
-    res.json({ status: 'success', message: 'Proyecto actualizado exitosamente' });
+    res.json({ status: 'success', message: 'Mantenimiento actualizado exitosamente' });
   } catch (error) {
     console.log(error);
     res.json({ status: 'error', message: 'Ocurrio un error al actualizar' });
@@ -2416,7 +2414,7 @@ router.post('/sendReportMaintenance', async (req, res) => {
     }).exec();
 
 
-    let newMaintenances = maintenance.boards.map(board => {
+    let newBoards = maintenance.boards.map(board => {
 
       let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
       let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
@@ -2460,7 +2458,6 @@ router.post('/sendReportMaintenance', async (req, res) => {
         }
         return cellAfter
       });
-
       let cellsFinding = tmpCellsFinding.map(cellFinding => {
         if (cellFinding.photos.length == 0) {
           cellFinding.photos = [{
@@ -3316,7 +3313,7 @@ router.post('/attentionsReport', authMiddleware, async (req, res) => {
 
 });
 router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
-  let { order, status, start, end, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
+  let { order, status, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
 
   let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   let query = schemas.Attention.find()

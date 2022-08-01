@@ -266,17 +266,6 @@ const semiAnnualMaintenance = () => {
             let status = true
             if (result.length > 0 && status) {
 
-                // valueSemiAnnual: 5,
-                // valueProvisioning: 2,
-                // timeSemiAnnual: 'minute',
-                // timeProvisioning: 'hour',
-                // expirationDateMaintenance: 2022-07-29 23:37:19,
-                // provisioningAlertDate:     2022-07-29 23:37:19,
-                // statusProvisioningAlertDate: 'pending',
-                // statusExpirationDateMaintenance: 'pending',
-                // remainingExpiratioDateMaintenanceDays: 129,
-                // remainingProvisioningAlertDays: 2
-
                 let {
                     _id,
                     valueSemiAnnual,
@@ -286,6 +275,8 @@ const semiAnnualMaintenance = () => {
                     remainingExpiratioDateMaintenanceDays,
                     remainingProvisioningAlertDays,
                 } = result[0]
+
+                console.log(result)
 
                 let maintenance = {}
                 if (statusProvisioningAlertDate == 'pending' && remainingProvisioningAlertDays < valueProvisioning) {
@@ -317,7 +308,7 @@ const semiAnnualMaintenance = () => {
                     console.log(emails.join(","))
                     console.log(emails)
                     mailer.emailSemiAnnual(maintenance, emails)
-                    // changeStatusExpirationMaintenance(maintenance, _id)
+                    changeStatusExpirationMaintenance(maintenance, _id)
 
                 }
                 // Contabilidad usuario de toda tienda
@@ -393,10 +384,15 @@ const changeStatusProvisioning = (maintenance, id) => {
 }
 
 const changeStatusExpirationMaintenance = (maintenance, id) => {
+
     if (maintenance.statusPayment == 'paid') {
+        let date = new Date();
+
         schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
             $set: {
                 statusExpirationDateMaintenance: 'send',
+                expirationDateMaintenance: date,
+                provisioningAlertDate: date,
             }
         }, {
             multi: true
@@ -409,7 +405,143 @@ const changeStatusExpirationMaintenance = (maintenance, id) => {
         }, {
             multi: true
         }).exec();
+
+        createMaintenance(maintenance);
     }
+}
+
+const createMaintenance = async oldMaintenance => {
+    let aroundItems = [];
+    let outletSampling = [];
+    let emergencylight = [];
+    let upsAutonomy = [];
+
+    let maintenance = new schemas.Maintenance({
+        name: oldMaintenance.name,
+        type: oldMaintenance.type,
+        observation: oldMaintenance.observation,
+        downloaded: false,
+        customer: mongoose.Types.ObjectId(oldMaintenance.customer._id),
+        status: "active",
+        centerOfAttention: mongoose.Types.ObjectId(oldMaintenance.centerOfAttention)
+    });
+
+    items = await schemas.Item.find({ mode: { $in: ['around'] } });
+    await asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+            maintenance: maintenance._id,
+            item: mongoose.Types.ObjectId(item._id),
+            status: 'activo',
+            photos: [],
+            value: 0.0,
+            percentBatery: 0.0,
+            hour: "",
+            hasHour: false
+        });
+        await itemImage.save();
+        aroundItems.push(itemImage);
+    });
+    maintenance.aroundItems = aroundItems;
+
+    items = await schemas.Item.find({ mode: { $in: ['outletSampling'] } });
+    await asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+            maintenance: maintenance._id,
+            item: mongoose.Types.ObjectId(item._id),
+            status: 'activo',
+            photos: [],
+            value: 0.0,
+            percentBatery: 0.0,
+            hour: "",
+            hasHour: false
+        });
+        await itemImage.save();
+        outletSampling.push(itemImage);
+    });
+    maintenance.outletSampling = outletSampling;
+
+    items = await schemas.Item.find({ mode: { $in: ['emergency_light'] } });
+    await asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+            maintenance: maintenance._id,
+            item: mongoose.Types.ObjectId(item._id),
+            status: 'activo',
+            photos: [],
+            value: 0.0,
+            percentBatery: 0.0,
+            hour: "",
+            hasHour: false
+        });
+        await itemImage.save();
+        emergencylight.push(itemImage);
+    });
+    maintenance.emergencylight = emergencylight;
+
+    items = await schemas.Item.find({ mode: { $in: ['ups_autonomy'] } });
+    await asyncForEach(items, async item => {
+        let itemImage = schemas.ItemImage({
+            maintenance: maintenance._id,
+            item: mongoose.Types.ObjectId(item._id),
+            status: 'activo',
+            photos: [],
+            value: 0.0,
+            percentBatery: 0.0,
+            hour: "",
+            hasHour: true
+        });
+        await itemImage.save();
+        upsAutonomy.push(itemImage);
+    });
+    maintenance.upsAutonomy = upsAutonomy;
+
+    maintenance.save();
+}
+
+const createAttention = async request => {
+    items = await schemas.Item.find({ mode: { $in: ['attention'] } });
+
+    let listAttentionImage = []
+    await fn.asyncForEach(items, async item => {
+        let attentionImage = new schemas.ItemImage({
+            item: item._id,
+            photos: [],
+            status: 'activo',
+            value: 0.0,
+            percentBatery: 0.0,
+            hour: "",
+            hasHour: false,
+            date: new Date()
+        })
+        await attentionImage.save();
+        listAttentionImage.push(attentionImage);
+
+    });
+
+    let centerOfAttention = null;
+    if (request.centerOfAttention) {
+        centerOfAttention = mongoose.Types.ObjectId(request.centerOfAttention);
+    }
+
+    let count = await schemas.Attention.countDocuments();
+
+    let attention = new schemas.Attention({
+        number: count + 1,
+        attentionItems: listAttentionImage,
+        description: req.body.observations,
+        title: request.description,
+        names: request.description,
+        document: "",
+        signature: "",
+        status: "created",
+        statusSend: "pending",
+        price: parseFloat(0),
+        customer: mongoose.Types.ObjectId(request.customer),
+        creator: mongoose.Types.ObjectId(request.user),
+        attentionType: mongoose.Types.ObjectId(request.request_type),
+        centerOfAttention: centerOfAttention,
+        presave: true
+    });
+    await attention.save();
 }
 
 const sendMailProvisioningAlert = (provisioningAlertDate, id) => {
@@ -533,4 +665,5 @@ module.exports = {
     getChildrens,
     semiAnnualMaintenance,
     getEmailNotification,
+    createAttention
 };
