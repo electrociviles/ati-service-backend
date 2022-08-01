@@ -3075,7 +3075,7 @@ router.post('/requestsReport', authMiddleware, async (req, res) => {
 })
 router.post('/requestReportExcel', authMiddleware, async (req, res) => {
 
-  let { order, status, start, end, startDate, endDate, requestType, customer, centerOfAttention } = req.body
+  let { order, status, start, end, startDate, endDate, requestType, customer, centerOfAttention, source } = req.body
 
   var workbook = new excel.Workbook();
 
