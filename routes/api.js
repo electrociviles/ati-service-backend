@@ -3316,7 +3316,7 @@ router.post('/attentionsReport', authMiddleware, async (req, res) => {
 
 });
 router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
-  let { order, status, start, end, attentionType, customer, centerOfAttention, source } = req.body
+  let { order, status, start, end, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
 
   let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   let query = schemas.Attention.find()
