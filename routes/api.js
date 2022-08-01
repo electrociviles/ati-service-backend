@@ -3097,6 +3097,9 @@ router.post('/requestReportExcel', authMiddleware, async (req, res) => {
   worksheet.cell(1, 8).string('ESTADO').style(style);
 
   let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
+  console.log(dates)
+  console.log(req.body)
+
   var query = schemas.Request.find()
     .select()
     .populate("request_type")
