@@ -487,18 +487,19 @@ const addDateToExpirationDateMaintenance = (expirationDateMaintenance, id) => {
         multi: true
     }).exec();
 }
-const getDates = (start, end) => {
+const getDates = (start, end, split) => {
 
     let newStart = ''
     let newEnd = ''
     if (start && end) {
-        let parts = start.toString().split(" ")
+        let parts = start.toString().split(split)
+        console.log('parts ', parts)
         newStart = `${parts[0]} 00:00:00`
-        parts = end.toString().split(' ')
+        parts = end.toString().split(split)
         newEnd = `${parts[0]} 23:59:59`
     }
     else if (start) {
-        let parts = start.toString().split(" ")
+        let parts = start.toString().split(split)
         newStart = `${parts[0]} 00:00:00`
         newEnd = `${parts[0]} 23:59:59`
     }

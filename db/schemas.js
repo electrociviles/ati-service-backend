@@ -73,6 +73,7 @@ var MaintenanceSchema = new mongoose.Schema({
     name: String,
     type: String,
     observation: String,
+    date: Date,
     downloaded: Boolean,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     boards: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Board' }],

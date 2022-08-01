@@ -2281,6 +2281,7 @@ router.post('/downloadAttention', async (req, res) => {
       axios.post(config.pathServicePhp + 'attention.php', data)
         .then(async (response) => {
 
+          console.log(response.data)
           res.json({
             status: 'success',
             message: 'Documento generado exitosamente'
@@ -2898,70 +2899,69 @@ router.post('/listNotifications', authMiddleware, async (req, res) => {
   res.json({ status: 'success', notifications });
 });
 
-router.post('/reportAttention', async (req, res) => {
+// router.post('/reportAttention', async (req, res) => {
 
-  let { start, end, paginate, startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
+//   let { start, end, paginate, startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
 
+//   let queryCount = schemas.Attention.countDocuments();
 
-  let queryCount = schemas.Attention.countDocuments();
+//   let query = schemas.Attention.find().populate({
+//     path: 'attentionItems',
+//     populate: [{
+//       path: "item"
+//     }]
+//   }).populate({
+//     path: 'customer',
+//   }).populate({
+//     path: 'attentionType',
+//   }).populate({
+//     path: 'centerOfAttention',
+//   }).populate({
+//     path: 'descriptions',
+//     populate: [{
+//       path: "customer"
+//     }]
+//   });
 
-  let query = schemas.Attention.find().populate({
-    path: 'attentionItems',
-    populate: [{
-      path: "item"
-    }]
-  }).populate({
-    path: 'customer',
-  }).populate({
-    path: 'attentionType',
-  }).populate({
-    path: 'centerOfAttention',
-  }).populate({
-    path: 'descriptions',
-    populate: [{
-      path: "customer"
-    }]
-  });
+//   if (customer) {
+//     query.where('customer').equals(mongoose.Types.ObjectId(customer))
+//     queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
+//   }
+//   if (centerOfAttention)
+//     query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention))
 
-  if (customer) {
-    query.where('customer').equals(mongoose.Types.ObjectId(customer))
-    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer))
-  }
-  if (centerOfAttention)
-    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention))
+//   if (serviceType && serviceType != "1")
+//     query.where('attentionType').equals(serviceType)
 
-  if (serviceType && serviceType != "1")
-    query.where('attentionType').equals(serviceType)
-
-  if (serviceStatus)
-    query.where('statusSend').equals(mongoose.Types.ObjectId(serviceStatus))
-
-
-  if (startDate && endDate) {
-    let partsStartDate = startDate.split('T')
-    let partsEndDate = endDate.split('T')
-    query.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
-    queryCount.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
-  } else if (startDate) {
-    let partsStartDate = startDate.split('T')
-    query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
-    queryCount.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
-  }
-  if (paginate) {
-    query.skip(start)
-      .limit(end);
-  }
-  let attentions = await query.exec();
-  let count = await queryCount.exec();
+//   if (serviceStatus)
+//     query.where('statusSend').equals(mongoose.Types.ObjectId(serviceStatus))
 
 
+//   if (startDate && endDate) {
+//     let partsStartDate = startDate.split('T')
+//     let partsEndDate = endDate.split('T')
+//     query.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
+//     queryCount.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
+//   } else if (startDate) {
+//     let partsStartDate = startDate.split('T')
+//     query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
+//     queryCount.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
+//   }
+//   if (paginate) {
+//     query.skip(start)
+//       .limit(end);
+//   }
+//   let attentions = await query.exec();
+//   let count = await queryCount.exec();
 
-  res.json({ status: 'success', attentions, count });
-});
+
+
+//   res.json({ status: 'success', attentions, count });
+// });
 
 router.post('/printReportAttention', async (req, res) => {
 
-  let { startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus } = req.body;
+  let { startDate, endDate, customer, centerOfAttention, serviceType, serviceStatus, source } = req.body;
 
   let query = schemas.Attention.find().populate({
     path: 'attentionItems',
@@ -2990,17 +2990,15 @@ router.post('/printReportAttention', async (req, res) => {
   if (serviceType && serviceType != "1")
     query.where('attentionType').equals(serviceType)
 
-  if (serviceStatus)
+  if (serviceStatus && serviceStatus != '1')
     query.where('statusSend').equals(mongoose.Types.ObjectId(serviceStatus))
 
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
 
-  if (startDate && endDate) {
-    let partsStartDate = startDate.split('T')
-    let partsEndDate = endDate.split('T')
-    query.where('date').gte((partsStartDate[0] + " 00:00:00")).lte(partsEndDate[0] + " 23:59:59")
+  if (dates.start && dates.end) {
+    query.where('date').gte(dates.start).lte(dates.end)
   } else if (startDate) {
-    let partsStartDate = startDate.split('T')
-    query.where('date').gte(partsStartDate[0] + " 00:00:00").lte(partsStartDate[0] + " 23:59:59")
+    query.where('date').gte(dates.start).lte(dates.start)
   }
 
   let attentions = await query.exec();
@@ -3008,8 +3006,6 @@ router.post('/printReportAttention', async (req, res) => {
     attentions: attentions,
     total: 1000,
   }
-
-  // console.log(JSON.stringify(data, null, 6))
 
   axios.post(`${config.jsReportClient}reports`, {
     shortid: 'HklnmnRtb9',
@@ -3024,29 +3020,32 @@ router.post('/printReportAttention', async (req, res) => {
   }).catch(function (error) {
     console.log("error", error);
   })
-});
-
+})
 router.post('/requestsReport', authMiddleware, async (req, res) => {
 
-  let { order, status, start, end, requestType, customer, centerOfAttention } = req.body
-
-  let dates = fn.getDates(start, end)
+  let { order, status, start, end, paginate, startDate, endDate, requestType, customer, centerOfAttention, source } = req.body
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   var query = schemas.Request.find()
     .select()
     .populate("request_type")
     .populate("user")
     .populate("centerOfAttention")
+    .populate("customer")
+    .populate("descriptions")
   let queryCount = schemas.Request.countDocuments();
 
   query.where('date').gte(dates.start).lte(dates.end);
-  if (requestType) {
+  if (requestType && requestType != 1) {
     query.where('request_type').equals(mongoose.Types.ObjectId(requestType));
+    queryCount.where('request_type').equals(mongoose.Types.ObjectId(requestType));
   }
   if (customer) {
     query.where('customer').equals(mongoose.Types.ObjectId(customer));
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer));
   }
   if (centerOfAttention) {
     query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+    queryCount.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
   }
   if (order) {
     if (order.key == 'mas') {
@@ -3057,14 +3056,21 @@ router.post('/requestsReport', authMiddleware, async (req, res) => {
   }
   if (status && status.key != '-1') {
     query.where({ "status": status.key });
+    queryCount.where({ "status": status.key });
   }
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
+
   let requests = await query.exec();
-  res.json({ status: 'success', requests, message: "Success" });
+  let count = await queryCount.exec();
+  res.json({ status: 'success', requests, count, message: "Success" });
 
 })
 router.post('/requestReportExcel', authMiddleware, async (req, res) => {
 
-  let { order, status, start, end, requestType, customer, centerOfAttention } = req.body
+  let { order, status, start, end, startDate, endDate, requestType, customer, centerOfAttention } = req.body
 
   var workbook = new excel.Workbook();
 
@@ -3085,7 +3091,7 @@ router.post('/requestReportExcel', authMiddleware, async (req, res) => {
   worksheet.cell(1, 7).string('CENTRO DE ATENCIÓN').style(style);
   worksheet.cell(1, 8).string('ESTADO').style(style);
 
-  let dates = fn.getDates(start, end)
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   var query = schemas.Request.find()
     .select()
     .populate("request_type")
@@ -3152,7 +3158,7 @@ router.post('/requestReportExcel', authMiddleware, async (req, res) => {
 router.post('/printRequest', async (req, res) => {
 
   let { id } = req.body;
-  requests = await schemas.Request.findById(id)
+  request = await schemas.Request.findById(id)
     .populate("request_type")
     .populate("user")
     .populate("centerOfAttention")
@@ -3183,8 +3189,8 @@ router.post('/printRequest', async (req, res) => {
 });
 router.post('/printRequests', async (req, res) => {
 
-  let { order, status, start, end, requestType, customer, centerOfAttention } = req.body
-  let dates = fn.getDates(start, end)
+  let { order, status, start, startDate, endDate, end, requestType, customer, centerOfAttention, source } = req.body
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
 
   var query = schemas.Request.find()
     .select()
@@ -3238,14 +3244,13 @@ router.post('/printRequests', async (req, res) => {
     console.log("error", error);
   })
 });
-
-
 router.post('/attentionsReport', authMiddleware, async (req, res) => {
 
-  let { order, status, start, end, attentionType, customer, centerOfAttention } = req.body
+  let { order, status, start, end, paginate, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
 
-
-  let dates = fn.getDates(start, end)
+  console.log(req.body)
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
+  console.log(dates)
   let query = schemas.Attention.find()
     .populate({
       path: 'attentionItems',
@@ -3260,24 +3265,26 @@ router.post('/attentionsReport', authMiddleware, async (req, res) => {
       path: 'attentionType',
     }).populate({
       path: 'centerOfAttention',
-    })
-  // .populate({
-  //   path: 'descriptions',
-  //   populate: [{
-  //     path: "customer"
-  //   }]
-  // });
+    }).populate({
+      path: 'descriptions',
+      populate: [{
+        path: "customer"
+      }]
+    });
   let queryCount = schemas.Attention.countDocuments();
 
   query.where('date').gte(dates.start).lte(dates.end);
   if (attentionType) {
     query.where('attentionType').equals(mongoose.Types.ObjectId(attentionType));
+    queryCount.where('attentionType').equals(mongoose.Types.ObjectId(attentionType));
   }
   if (customer) {
     query.where('customer').equals(mongoose.Types.ObjectId(customer));
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer));
   }
   if (centerOfAttention) {
     query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+    queryCount.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
   }
   if (order) {
     if (order.key == 'mas') {
@@ -3286,17 +3293,23 @@ router.post('/attentionsReport', authMiddleware, async (req, res) => {
       query.sort({ "_id": 1 });
     }
   }
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
   if (status && status.key != '-1') {
     query.where({ "status": status.key });
+    queryCount.where({ "status": status.key });
   }
   let attentions = await query.exec();
-  res.json({ status: 'success', attentions, message: "Success" });
+  let count = await queryCount.exec();
+  res.json({ status: 'success', attentions, count, message: "Success" });
 
-})
+});
 router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
-  let { order, status, start, end, attentionType, customer, centerOfAttention } = req.body
+  let { order, status, start, end, attentionType, customer, centerOfAttention, source } = req.body
 
-  let dates = fn.getDates(start, end)
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   let query = schemas.Attention.find()
     .populate({
       path: 'attentionItems',
@@ -3392,12 +3405,13 @@ router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
   }, 1000);
 
 
-})
+});
 router.post('/attentionsReportPdf', async (req, res) => {
 
-  let { order, status, start, end, attentionType, customer, centerOfAttention } = req.body
+  console.log(req.body)
+  let { order, status, start, end, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
 
-  let dates = fn.getDates(start, end)
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   let query = schemas.Attention.find()
     .populate({
       path: 'attentionItems',
