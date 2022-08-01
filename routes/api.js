@@ -3256,6 +3256,7 @@ router.post('/attentionsReport', authMiddleware, async (req, res) => {
 
   let { order, status, start, end, paginate, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
 
+  console.log("---------------------------------------------")
   console.log(req.body)
   let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
   console.log(dates)
