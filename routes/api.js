@@ -377,7 +377,7 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
 
       let tokensFCM = await fn.getTokenFCMAdmins()
       if (tokensFCM) {
-        notification.sendNotification(tokensFCM, 'Alerta de solicitud', `Se ha creado una solicitud`, data);
+        notification.sendNotification(tokensFCM, 'Alerta de solicitud', `Se ha creado una solicitud`, {});
       }
 
       res.json({ status: 'success', request, message: "Solicitud registrada exitosamente" });
