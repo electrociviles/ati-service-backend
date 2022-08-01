@@ -98,6 +98,7 @@ var ItemImageSchema = new mongoose.Schema({
     hour: String,
     percentBatery: mongoose.Schema.Types.Double,
     status: String,
+    date: String,
     value: mongoose.Schema.Types.Double,
 });
 var ItemImage = mongoose.model('Item_Image', ItemImageSchema);
@@ -126,6 +127,7 @@ var ItemBoardSchema = new mongoose.Schema({
     board: { type: mongoose.Schema.Types.ObjectId, ref: 'Board' },
     item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
     photos: [],
+    date: String,
     status: String,
     observations: String,
     title: String,

@@ -534,6 +534,7 @@ router.post('/updatedBoard', async (req, res) => {
       status: 'activo',
       photos: [],
       value: 0.0,
+      date: new Date()
     });
     await itemBoard.save();
 
@@ -755,7 +756,8 @@ router.post('/updatedmaintenance', async (req, res) => {
         value: 0.0,
         percentBatery: 0.0,
         hour: "",
-        hasHour: false
+        hasHour: false,
+        date: new Date()
       });
       await itemImage.save();
       emergencylights.push(itemImage);
@@ -1367,42 +1369,6 @@ router.post('/closeAttention', async (req, res) => {
   }
 });
 
-// router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
-//   try {
-//     await fn.asyncForEach(req.files, async (file) => {
-//       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-//       let src = await fs.createReadStream(file.path);
-//       let dest = await fs.createWriteStream('./uploads/' + fileName);
-//       src.pipe(dest);
-//       src.on('end', async () => {
-//         fs.unlinkSync(file.path);
-
-//         const Jimp = require('jimp');
-//         const image = await Jimp.read('./uploads/' + fileName);
-//         await image.resize(400, Jimp.AUTO);
-//         await image.quality(50);
-//         await image.writeAsync('./uploads/' + fileName);
-
-//         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-//           $push: { photos: { url: fileName, type: 'remote' } }
-//         }, {
-//           upsert: true
-//         }).exec();
-
-//         res.json({ status: 'success' });
-
-//       });
-//       src.on('error', (err) => {
-//         console.log(err);
-//         res.json({ status: 'error' });
-//       });
-//     });
-
-//   } catch (error) {
-//     console.log(error);
-//     res.json({ status: 'error' });
-//   }
-// });
 
 router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
 
@@ -1424,7 +1390,7 @@ router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) =>
         await image.writeAsync('./uploads/' + fileName);
 
         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
-          $push: { photos: { url: fileName, type: 'remote' } }
+          $push: { photos: { url: fileName, type: 'remote', date: new Date() } },
         }, {
           upsert: true
         }).exec();
