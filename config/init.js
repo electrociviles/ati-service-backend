@@ -100,6 +100,50 @@ exports.NewItem = function () {
         console.log(error)
     });
 }
+
+exports.MaintenanceType = function () {
+    var MaintenanceType = schemas.MaintenanceType;
+    var list = new Array();
+    let position = 1;
+
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        name: 'Anual',
+        value: 12,
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        name: 'Semestral',
+        value: 6,
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        name: 'Trimestral',
+        value: 3,
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        name: 'Bimestral',
+        value: 2,
+    };
+    list.push(item);
+
+    position++;
+
+
+    MaintenanceType.insertMany(list).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+}
 exports.UpdateMaintenanceSetNewItems = async function () {
     let maintenances = await schemas.Maintenance.find();
     await fn.asyncForEach(maintenances, async maintenance => {

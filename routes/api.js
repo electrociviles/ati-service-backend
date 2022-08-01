@@ -230,8 +230,8 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
   let currentUser = await schemas.User.findById(req.currentUser.id);
   let allowedRole = true;
 
-  let queryCount = schemas.Attention.countDocuments();
-  let query = schemas.Attention.find().populate({
+  let queryCount = schemas.Attention.countDocuments({ status: 'created' });
+  let query = schemas.Attention.find({ status: 'created' }).populate({
     path: 'attentionItems',
     populate: [{
       path: "item"
@@ -301,18 +301,24 @@ router.post('/getAttention', async (req, res) => {
 
 router.post('/testNotificationFCM', async (req, res) => {
 
-  // let { data, tokenFCM } = req.body;
-  // let registration_ids = [tokenFCM];
-  // notification.sendNotification( registration_ids, 'Test', `Esto es una prueba`, data);
+  let { data, tokenFCM } = req.body;
+  let registration_ids = [tokenFCM];
+  notification.sendNotification(registration_ids, 'Test', `Esto es una prueba`, data);
 
 
-  res.json({ status: 'success', foundUsers });
+  res.json({ status: 'success' });
 });
 
 router.post('/requestTypes', async (req, res) => {
 
   let requestTypes = await schemas.RequestType.find().exec();
   res.json({ status: 'success', requestTypes });
+});
+
+router.post('/listMaintenancesType', async (req, res) => {
+
+  let maintenancesType = await schemas.MaintenanceType.find();
+  res.json({ status: 'success', maintenancesType });
 });
 
 router.post('/createRequest', upload.any("files"), authMiddleware, async (req, res) => {
@@ -368,6 +374,11 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
         })
         .populate("centerOfAttention")
 
+
+      let tokensFCM = await fn.getTokenFCMAdmins()
+      if (tokensFCM) {
+        notification.sendNotification(tokensFCM, 'Alerta de solicitud', `Se ha creado una solicitud`, data);
+      }
 
       res.json({ status: 'success', request, message: "Solicitud registrada exitosamente" });
     } catch (error) {
@@ -468,7 +479,7 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
 
   let { start, end, paginate, search, encargado, user, customer } = req.body;
   let currentUser = await schemas.User.findById(req.currentUser.id);
-  var query = schemas.Customer.find().select();
+  var query = schemas.Customer.find();
   let queryCount = schemas.Customer.countDocuments();
 
   // if (encargado && user) {}}
@@ -501,6 +512,9 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
   query.populate({
     path: "users",
     populate: [{ path: "role" }]
+  })
+  query.populate({
+    path: "maintenanceType",
   })
   if (paginate) {
     query.skip(start)
@@ -678,8 +692,6 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
   try {
     let { statusRequest, description, id } = req.body
 
-    console.log(req.body)
-
     let request = await schemas.Request.findById(id)
       .populate("centerOfAttention")
       .populate("request_type");
@@ -688,11 +700,6 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
     var users = foundUsers.filter(user => user.tokenFCM);
     var ids = users.map(user => user.tokenFCM);
 
-    console.log(foundUsers)
-    console.log("---------------------------------------------------------------")
-    console.log(ids)
-    console.log("---------------------------------------------------------------")
-    console.log(request)
 
     if (ids.length > 0) {
       notification.sendNotification(ids, `Solicitud ${statusRequest == 'accept' ? 'Aprobada' : 'Rechazada'}`, `[${request.request_type.type}] ${request.description}`, {});
@@ -909,6 +916,11 @@ router.post('/createMaintenance', async (req, res) => {
       let emergencylight = [];
       let upsAutonomy = [];
 
+      let customer = await schemas.Customer.findById(req.body.customer).populate('maintenanceType')
+
+      var expiration = new Date();
+      expiration.setMonth(expiration.getMonth() + customer.maintenanceType.value);
+
       let maintenance = new schemas.Maintenance({
         name: req.body.name,
         type: req.body.type,
@@ -917,7 +929,13 @@ router.post('/createMaintenance', async (req, res) => {
         price: req.body.price,
         customer: mongoose.Types.ObjectId(req.body.customer),
         status: "active",
-        centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention)
+        centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
+        statusPayment: 'pending',
+        value: customer.maintenanceType.value,
+        time: 'month',
+        expiration,
+        statusAlertOne: 'pending',
+        statusAlertTwo: 'pending',
       });
 
       items = await schemas.Item.find({ mode: { $in: ['around'] } });
@@ -1132,6 +1150,10 @@ router.post('/createAttention', upload.any("pictures"), authMiddleware, async (r
     }).populate({
       path: 'customer',
     }).exec();
+
+    let tokensFCM = fn.getTokenFCMAdmins()
+    let registration_ids = [tokenFCM];
+    notification.sendNotification(registration_ids, 'Test', `Esto es una prueba`, data);
 
 
     res.json({ status: 'success', attention });
@@ -2100,7 +2122,7 @@ router.post('/updateTimeExpiration', async (req, res) => {
 
 router.post('/createCenterOfAttention', async (req, res) => {
 
-  let { valueSemiAnnual, valueProvisioning, timeSemiAnnual, timeProvisioning } = req.body;
+  let { name, description, customer } = req.body;
   let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': req.body.title })
   if (!centerOfAttention) {
 
@@ -2113,18 +2135,17 @@ router.post('/createCenterOfAttention', async (req, res) => {
         valueProvisioning,
         timeSemiAnnual,
         timeProvisioning,
-        description: req.body.description,
-        maintenanceCost: req.body.maintenanceCost,
+        description: description,
         expirationDateMaintenance: date,
         provisioningAlertDate: date,
         statusProvisioningAlertDate: 'pending',
         statusAlertDateMaintenance: 'pending',
-        customer: mongoose.Types.ObjectId(req.body.customer),
+        customer: mongoose.Types.ObjectId(customer),
         status: 'active',
       });
       await centerOfAttention.save();
 
-      schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(req.body.customer) }, {
+      schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(customer) }, {
         $push: { centersOfAttention: centerOfAttention },
       }, {
         multi: true
@@ -2282,6 +2303,9 @@ router.post('/createCustomer', async (req, res) => {
   if (!cus) {
 
     try {
+      let maintenanceType = null
+      if (req.body.maintenanceType)
+        maintenanceType = mongoose.Types.ObjectId(req.body.maintenanceType)
 
       let customer = schemas.Customer({
         name: req.body.name,
@@ -2289,6 +2313,7 @@ router.post('/createCustomer', async (req, res) => {
         address: req.body.address,
         phone: req.body.phone,
         email: req.body.email,
+        maintenanceType,
         status: 'activo'
       });
       await customer.save()
@@ -2318,6 +2343,12 @@ router.post('/createCustomer', async (req, res) => {
 router.post('/updateCustomer', async (req, res) => {
   try {
 
+    console.log(req.body)
+    let maintenanceType = null
+    if (req.body.maintenanceType)
+      maintenanceType = mongoose.Types.ObjectId(req.body.maintenanceType)
+
+
     schemas.Customer.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         name: req.body.name,
@@ -2325,6 +2356,7 @@ router.post('/updateCustomer', async (req, res) => {
         address: req.body.username,
         phone: req.body.phone,
         email: req.body.email,
+        maintenanceType: maintenanceType,
       }
     }, {
       multi: true
@@ -2541,7 +2573,7 @@ router.post('/finishAttention', async (req, res) => {
       axios.post(config.pathServicePhp + 'attention.php', data)
         .then(async (response) => {
 
-          // await fn.sendEmailAttention(attention._id);
+          await fn.sendEmailAttention(attention._id, 'email');
 
           res.json({
             status: 'success',
@@ -2631,6 +2663,7 @@ router.post('/removeImage', async (req, res) => {
 
   let photos;
   let itemImage;
+  console.log(req.body)
   try {
 
     switch (req.body.group) {
@@ -2644,7 +2677,7 @@ router.post('/removeImage', async (req, res) => {
         break;
 
       case 'board':
-
+      case 'attention':
       case 'around':
         itemImage = await schemas.ItemImage.findOne({ _id: mongoose.Types.ObjectId(req.body.id) })
         photos = itemImage.photos.filter(item => item.url != req.body.url)

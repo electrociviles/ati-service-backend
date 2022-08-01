@@ -18,6 +18,7 @@ const jwt_decode = require("jwt-decode");
 var app = express();
 var schemas = require("./db/schemas");
 const notification = require('./utils/notification');
+const { log } = require('console');
 
 
 app.use(cors({
@@ -59,9 +60,9 @@ app.use(function (err, req, res, next) {
 
 let cronProcess = {
   semiAnnualMaintenance: {
-    status: false,
+    status: true,
     // times: '*/5 * * * * *'
-    times: '*/5 * * * * *'
+    times: '*/10 * * * * *'
   }
 }
 cron.schedule(cronProcess.semiAnnualMaintenance.times, function () {
@@ -79,8 +80,10 @@ const server = http.Server(app);
 const io = socketIO(server)
 var nsp = io.of(config.namespace)
 
-server.listen(config.port, function () {
+server.listen(config.port, async function () {
   console.log(`Escuchando el puerto ${config.port}!`);
+
+  // init.MaintenanceType()
   // init.Start();
   // init.createUser();
   // init.createCustomer();
@@ -94,12 +97,7 @@ server.listen(config.port, function () {
   // init.UpdateProjectSetNewItems();
   // init.NewItem();
   // init.createRequestType();
-  // fn.getEmailNotification("622cc6452958c3c61299998a").then(emails => {
-  //   console.log(emails)
-  //   emails = emails.map(email => email.email)
-  //   console.log(emails.join(","))
 
-  // })
 
 });
 nsp.on('connection', socket => {

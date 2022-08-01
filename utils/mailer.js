@@ -39,38 +39,17 @@ exports.emailMaintenance = (maintenance, link) => {
 
     })
 }
-exports.emailAttention = (attention, attachments) => {
+exports.emailAttention = (attention, attachments, emails) => {
     var nodemailer = require("nodemailer");
     nodemailer.createTestAccount((err, account) => {
 
-        // let transporter = nodemailer.createTransport({
-        //     // service: 'Godaddy',
-        //     host: "mail.privateemail.com",
-        //     secureConnection: true,
-        //     port: 465,
-        //     auth:
-        //     {
-        //         user: "info@ebanoextensiones.com",
-        //         pass: "nTorres.12"
-        //     }
-        // });
-
-        // let transporter = nodemailer.createTransport({
-        //     // service: 'Godaddy',
-        //     host: "smtp.hostinger.com",
-        //     secureConnection: false,
-        //     port: 465,
-        //     auth: {
-        //         user: "informes@123-tecnicos.com",
-        //         pass: "Empresa2021*"
-        //     }
-        // });
-
         let transporter = nodemailer.createTransport({
-            service: 'gmail',
+            host: 'mail.privateemail.com',
+            port: 465,
+            secureConnection: true,
             auth: {
-                user: "informeselectrociviles@gmail.com",
-                pass: "Electrociviles2022"
+                user: "informes@atiservicios.com",
+                pass: "Ati2022#*"
             }
         });
 
@@ -79,13 +58,12 @@ exports.emailAttention = (attention, attachments) => {
         <p>La atención fue cerrada exitosamente para mas información ver el archivo adjunto</p>
         </div>`
         let mailOptions = {
-            from: 'informeselectrociviles@gmail.com',
-            to: attention.customer.email,
+            from: `"Finalizacion de atención" <${emailSender}>`,
+            to: emails,
             subject: '📎',
             attachments,
             html,
         }
-        console.log(attention.customer.email);
 
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {

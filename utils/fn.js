@@ -128,8 +128,18 @@ const sendEmailAttention = (id, action) => {
                 content: pdfBase64,
                 encoding: 'base64'
             }];
-            if (action == "email")
-                mailer.emailAttention(attention, attachments);
+            if (action == "email") {
+
+                let emailsCustomer = await getEmailCustomer(attention.customer._id)
+                emailsCustomer = emailsCustomer.map(email => email.email)
+
+                let emailsAdmins = await getEmailAdmins()
+                emailsAdmins = emailsAdmins.map(email => email.email != email.email)
+
+
+                let emails = [...emailsCustomer, ...emailsAdmins]
+                mailer.emailAttention(attention, attachments, emails);
+            }
 
             resolve(true);
 
@@ -234,89 +244,61 @@ const semiAnnualMaintenance = () => {
 
     return new Promise(async (resolve, reject) => {
         try {
-            let result = await schemas.CenterOfAttention.aggregate([{
-                $project: {
-                    valueSemiAnnual: 1,
-                    valueProvisioning: 1,
-                    provisioningAlertDate: 1,
-                    expirationDateMaintenance: 1,
-                    statusExpirationDateMaintenance: 1,
-                    statusProvisioningAlertDate: 1,
-                    timeSemiAnnual: 1,
-                    timeProvisioning: 1,
-                    remainingExpiratioDateMaintenanceDays: {
-                        $dateDiff: {
-                            startDate: "$$NOW",
-                            endDate: "$expirationDateMaintenance",
-                            unit: "$timeSemiAnnual"
-                        }
-                    },
-                    remainingProvisioningAlertDays: {
-                        $dateDiff: {
-                            startDate: "$$NOW",
-                            endDate: "$provisioningAlertDate",
-                            unit: "$timeProvisioning"
-                        }
+            let result = await schemas.Maintenance.aggregate([{
+                $match: {
+                    "expiration": {
+                        $exists: true,
+                        $ne: null
                     }
                 }
             },
-            ]).exec();
+            {
+                $project: {
+                    value: 1,
+                    time: 1,
+                    expiration: 1,
+                    statusAlertOne: 1,
+                    statusAlertTwo: 1,
+                    remaining: {
+                        $dateDiff: {
+                            startDate: "$$NOW",
+                            endDate: "$expiration",
+                            unit: "$time"
+                        }
+                    }
+                }
+            }]).exec();
 
+            if (result.length > 0) {
 
-            let status = true
-            if (result.length > 0 && status) {
-
-                let {
-                    _id,
-                    valueSemiAnnual,
-                    valueProvisioning,
-                    statusProvisioningAlertDate,
-                    statusExpirationDateMaintenance,
-                    remainingExpiratioDateMaintenanceDays,
-                    remainingProvisioningAlertDays,
-                } = result[0]
+                let { _id, value, time, expiration, statusAlertOne, statusAlertTwo, remaining } = result[0]
 
                 console.log(result)
 
                 let maintenance = {}
-                if (statusProvisioningAlertDate == 'pending' && remainingProvisioningAlertDays < valueProvisioning) {
-                    console.log("*************** Uno *************************")
-                    maintenance = await
-                        schemas.Maintenance
-                            .findOne({ centerOfAttention: mongoose.Types.ObjectId(_id) })
-                            .populate("customer")
-                    console.log(maintenance)
+                if (statusAlertOne == 'pending' && remaining == 1) {
+                    maintenance = await schemas.Maintenance.findById(_id).populate("customer")
 
-                    let emails = await getEmailNotification(maintenance.customer._id)
+                    let emails = await getEmailCustomer(maintenance.customer._id)
                     emails = emails.map(email => email.email)
                     console.log(emails.join(","))
                     console.log(emails)
 
                     mailer.emailProvisioning(maintenance, emails)
-                    changeStatusProvisioning(maintenance, _id,)
+                    changeStatusAlertOne(_id)
 
                 }
-                if (statusExpirationDateMaintenance == 'pending' && remainingExpiratioDateMaintenanceDays < valueSemiAnnual) {
+                if (statusAlertTwo == 'pending' && remaining == 0) {
                     console.log("*************** Dos *************************")
-                    maintenance =
-                        await schemas.Maintenance
-                            .findOne({ centerOfAttention: mongoose.Types.ObjectId(_id) })
-                            .populate("customer")
+                    maintenance = await schemas.Maintenance.findById(_id).populate("customer")
+                    console.log(maintenance)
 
-                    let emails = await getEmailNotification(maintenance.customer._id)
+                    let emails = await getEmailCustomer(maintenance.customer._id)
                     emails = emails.map(email => email.email)
-                    console.log(emails.join(","))
                     console.log(emails)
                     mailer.emailSemiAnnual(maintenance, emails)
-                    changeStatusExpirationMaintenance(maintenance, _id)
-
+                    changeStatusAlertTwo(maintenance, _id)
                 }
-                // Contabilidad usuario de toda tienda
-                // 1 un mes antes de vencer el mantenimiento se le envia un correo al oset de cadata tienda 
-                // informandole que debe aprovisonar 6.000.000 de pesos
-                // Enviar email al oset y jefe de mantenimiento 
-                // avisandole que el mantenimiento se va a vencer
-                // Mantenimientos correctivos
             }
             resolve(true);
         } catch (error) {
@@ -329,7 +311,7 @@ const semiAnnualMaintenance = () => {
     });
 }
 
-const getEmailNotification = customer => {
+const getEmailCustomer = customer => {
 
     return new Promise(async (resolve, _) => {
         let emails = await schemas.User.aggregate([{
@@ -373,41 +355,170 @@ const getEmailNotification = customer => {
 
 }
 
-const changeStatusProvisioning = (maintenance, id) => {
-    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+const getEmailAdmins = () => {
+
+    return new Promise(async (resolve, _) => {
+        let emails = await schemas.User.aggregate([{
+            $project: {
+                name: 1,
+                email: 1,
+                role: 1,
+            }
+        }, {
+            $lookup: {
+                from: "roles",
+                localField: "role",
+                foreignField: "_id",
+                as: "role"
+            }
+        }, {
+            $unwind: { path: "$role" }
+        },
+        {
+            $match:
+            {
+                "role.tag": {
+                    $in: ["administrator"]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                email: 1
+            }
+        }])
+
+        resolve(emails);
+    })
+
+
+}
+
+const getTokenFCMAdmins = () => {
+
+    return new Promise(async (resolve, _) => {
+        let tokensFCM = await schemas.User.aggregate([{
+            $match: {
+                "tokenFCM": {
+                    $exists: true,
+                    $ne: null
+                }
+            }
+        },
+        {
+            $project: {
+                name: 1,
+                tokenFCM: 1,
+                role: 1,
+            }
+        }, {
+            $lookup: {
+                from: "roles",
+                localField: "role",
+                foreignField: "_id",
+                as: "role"
+            }
+        }, {
+            $unwind: { path: "$role" }
+        },
+        {
+            $match:
+            {
+                "role.tag": {
+                    $in: ["administrator"]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                tokenFCM: 1
+            }
+        }, {
+            $unwind: { path: "$tokenFCM" }
+        }])
+        if (tokensFCM) {
+            tokensFCM = tokensFCM.map(tokenFCM => tokenFCM.tokenFCM)
+        }
+
+        resolve(tokensFCM);
+    })
+
+
+}
+
+const getTokenFCMCustomer = customer => {
+
+    return new Promise(async (resolve, _) => {
+
+        let emails = await schemas.User.aggregate([{
+            $match: {
+                'customer': mongoose.Types.ObjectId(customer),
+                "tokenFCM": {
+                    $exists: true,
+                    $ne: null
+                }
+            }
+        }, {
+            $project: {
+                name: 1,
+                tokenFCM: 1,
+                role: 1,
+            }
+        }, {
+            $lookup: {
+                from: "roles",
+                localField: "role",
+                foreignField: "_id",
+                as: "role"
+            }
+        }, {
+            $unwind: { path: "$role" }
+        },
+        {
+            $match: {
+                "role.tag": {
+                    $in: ["construction_manager", "maintenance_manager", "oset", "permanent"]
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 1,
+                tokenFCM: 1
+            }
+        }, {
+            $unwind: { path: "$tokenFCM" }
+        }])
+
+        resolve(emails);
+    })
+}
+
+const changeStatusAlertOne = id => {
+    schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
         $set: {
-            statusProvisioningAlertDate: 'send',
+            statusAlertOne: 'send',
         }
     }, {
         multi: true
     }).exec();
 }
 
-const changeStatusExpirationMaintenance = (maintenance, id) => {
+const changeStatusAlertTwo = (maintenance, id) => {
 
-    if (maintenance.statusPayment == 'paid') {
-        let date = new Date();
+    schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+        $set: {
+            statusAlertTwo: 'send',
+            statusPayment: 'pendingPay'
+        }
+    }, {
+        multi: true
+    }).exec();
 
-        schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-            $set: {
-                statusExpirationDateMaintenance: 'send',
-                expirationDateMaintenance: date,
-                provisioningAlertDate: date,
-            }
-        }, {
-            multi: true
-        }).exec();
+    createMaintenance(maintenance);
 
-        schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-            $set: {
-                status: 'finished',
-            }
-        }, {
-            multi: true
-        }).exec();
-
-        createMaintenance(maintenance);
-    }
 }
 
 const createMaintenance = async oldMaintenance => {
@@ -416,14 +527,26 @@ const createMaintenance = async oldMaintenance => {
     let emergencylight = [];
     let upsAutonomy = [];
 
+    let customer = await schemas.Customer.findById(oldMaintenance.customer._id).populate('maintenanceType')
+
+    var expiration = new Date();
+    expiration.setMonth(expiration.getMonth() + customer.maintenanceType.value);
+
     let maintenance = new schemas.Maintenance({
         name: oldMaintenance.name,
         type: oldMaintenance.type,
         observation: oldMaintenance.observation,
         downloaded: false,
+        price: oldMaintenance.price,
         customer: mongoose.Types.ObjectId(oldMaintenance.customer._id),
         status: "active",
-        centerOfAttention: mongoose.Types.ObjectId(oldMaintenance.centerOfAttention)
+        statusPayment: '',
+        centerOfAttention: mongoose.Types.ObjectId(oldMaintenance.centerOfAttention),
+        value: customer.maintenanceType.value,
+        time: 'month',
+        expiration,
+        statusAlertOne: 'pending',
+        statusAlertTwo: 'pending',
     });
 
     items = await schemas.Item.find({ mode: { $in: ['around'] } });
@@ -544,81 +667,6 @@ const createAttention = async request => {
     await attention.save();
 }
 
-const sendMailProvisioningAlert = (provisioningAlertDate, id) => {
-    console.log('Enviar correo de aprovisionamiento... ');
-    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-        $set: {
-            statusProvisioningAlertDate: 'send',
-        }
-    }, {
-        multi: true
-    }).exec();
-
-    addDateToProvisioningAlert(provisioningAlertDate, id);
-}
-const sendMailExpirationDateMaintenance = (expirationDateMaintenance, id) => {
-    console.log('Enviar correo de mantenimiento... ');
-    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-        $set: {
-            statusExpirationDateMaintenance: 'send',
-        }
-    }, {
-        multi: true
-    }).exec();
-
-
-    addDateToExpirationDateMaintenance(expirationDateMaintenance, id);
-}
-const addDateToProvisioningAlert = (provisioningAlertDate, id) => {
-    let date = new Date(provisioningAlertDate.toString());
-
-    var month = date.getUTCMonth() + 1;
-    var day = date.getUTCDate();
-    var year = date.getUTCFullYear();
-
-    console.log('day ' + day);
-    console.log('month ' + month);
-    console.log('year ' + year);
-
-    var newDate = new Date(year, month, day);
-    newDate.setMonth(newDate.getMonth() + 6);
-
-    console.log('Add 6 month to provisioningAlertDate ');
-    console.log('newDate ', newDate);
-    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-        $set: {
-            statusProvisioningAlertDate: 'pending',
-            provisioningAlertDate: newDate,
-        }
-    }, {
-        multi: true
-    }).exec();
-}
-const addDateToExpirationDateMaintenance = (expirationDateMaintenance, id) => {
-    let date = new Date(expirationDateMaintenance.toString());
-
-    var month = date.getUTCMonth() + 1;
-    var day = date.getUTCDate();
-    var year = date.getUTCFullYear();
-
-    console.log('day ' + day);
-    console.log('month ' + month);
-    console.log('year ' + year);
-
-    var newDate = new Date(year, month, day);
-    newDate.setMonth(newDate.getMonth() + 6);
-
-    console.log('Add 6 month to expirationDateMaintenance ');
-    console.log('newDate ', newDate);
-    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
-        $set: {
-            statusExpirationDateMaintenance: 'pending',
-            expirationDateMaintenance: newDate,
-        }
-    }, {
-        multi: true
-    }).exec();
-}
 const getDates = (start, end, split) => {
 
     let newStart = ''
@@ -640,6 +688,7 @@ const getDates = (start, end, split) => {
         end: newEnd
     }
 }
+
 const formatDate = (date) => {
     let current_datetime = new Date(date)
 
@@ -647,6 +696,7 @@ const formatDate = (date) => {
     let formatted_date = current_datetime.getFullYear() + "/" + current_datetime.getMonth() + "/" + day
     return formatted_date
 }
+
 module.exports = {
     formatDate,
     getDates,
@@ -664,6 +714,8 @@ module.exports = {
     validateMaintenance,
     getChildrens,
     semiAnnualMaintenance,
-    getEmailNotification,
-    createAttention
+    getEmailCustomer,
+    createAttention,
+    getTokenFCMAdmins,
+    getTokenFCMCustomer
 };

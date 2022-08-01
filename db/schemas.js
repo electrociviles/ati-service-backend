@@ -29,6 +29,7 @@ var CustomerSchema = new mongoose.Schema({
     email: String,
     phone: String,
     nit: String,
+    maintenanceType: { type: mongoose.Schema.Types.ObjectId, ref: 'Maintenance_Type' },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     centersOfAttention: [{ type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' }],
 
@@ -69,6 +70,13 @@ UserSchema.pre('save', async function (next) {
 
 var User = mongoose.model('User', UserSchema);
 
+var MaintenanceTypeSchema = new mongoose.Schema({
+    name: String,
+    value: Number
+});
+var MaintenanceType = mongoose.model('Maintenance_Type', MaintenanceTypeSchema);
+
+
 var MaintenanceSchema = new mongoose.Schema({
     name: String,
     type: String,
@@ -83,8 +91,14 @@ var MaintenanceSchema = new mongoose.Schema({
     emergencylight: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     upsAutonomy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
+    maintenanceType: { type: mongoose.Schema.Types.ObjectId, ref: 'Maintenance_Type' },
     status: String,
-    statusPayment: String
+    statusPayment: String,
+    value: Number,
+    time: String,
+    expiration: Date,
+    statusAlertOne: String,
+    statusAlertTwo: String,
 
 });
 var Maintenance = mongoose.model('Maintenance', MaintenanceSchema);
@@ -255,15 +269,7 @@ const CenterOfAttentionSchema = new mongoose.Schema({
     status: String,
     customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    maintenanceCost: mongoose.Schema.Types.Double,
-    valueSemiAnnual: Number,
-    timeSemiAnnual: String,
-    valueProvisioning: Number,
-    timeProvisioning: String,
-    expirationDateMaintenance: Date,
-    statusExpirationDateMaintenance: String,
-    provisioningAlertDate: Date,
-    statusProvisioningAlertDate: String,
+
 })
 const CenterOfAttention = mongoose.model('center_of_attention', CenterOfAttentionSchema)
 
@@ -294,6 +300,7 @@ var schemas = {
     AttentionDescription,
     RequestType,
     Request,
-    RequestDescription
+    RequestDescription,
+    MaintenanceType
 };
 module.exports = schemas;
