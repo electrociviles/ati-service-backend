@@ -320,58 +320,63 @@ router.post('/createRequest', upload.any("files"), authMiddleware, async (req, r
   let currentUser = await schemas.User.findById(req.currentUser.id);
 
   let { description, requestType, centerOfAttention, customer } = req.body;
+
   if (req.body.centerOfAttention) {
     centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
   } else {
     centerOfAttention = null;
   }
-  let incomeCustomer = null;
-  if (customer) {
-    incomeCustomer = mongoose.Types.ObjectId(customer);
-  } else {
-    incomeCustomer = mongoose.Types.ObjectId(currentUser.customer);
-  }
+  if (centerOfAttention != null) {
+    let incomeCustomer = null;
+    if (customer) {
+      incomeCustomer = mongoose.Types.ObjectId(customer);
+    } else {
+      incomeCustomer = mongoose.Types.ObjectId(currentUser.customer);
+    }
 
-  var requestDescription = schemas.RequestDescription({
-    description: "Enviado",
-    status: "created",
-    date: new Date(),
-    user: mongoose.Types.ObjectId(req.currentUser.id),
-  })
-  requestDescription.save();
-
-  let count = await schemas.Request.countDocuments();
-
-  try {
-    let request = new schemas.Request({
-      number: count + 1,
-      description,
-      request_type: mongoose.Types.ObjectId(requestType),
-      centerOfAttention,
-      customer: incomeCustomer,
-      date: new Date(),
+    var requestDescription = schemas.RequestDescription({
+      description: "Enviado",
       status: "created",
+      date: new Date(),
       user: mongoose.Types.ObjectId(req.currentUser.id),
-      descriptions: [requestDescription._id]
-    });
-    await request.save();
+    })
+    requestDescription.save();
 
-    request = await schemas.Request.findById(request._id)
-      .populate("request_type")
-      .populate({
-        path: "user",
-        populate: [
-          { path: 'role' }
-        ]
-      })
-      .populate("centerOfAttention")
+    let count = await schemas.Request.countDocuments();
+
+    try {
+      let request = new schemas.Request({
+        number: count + 1,
+        description,
+        request_type: mongoose.Types.ObjectId(requestType),
+        centerOfAttention,
+        customer: incomeCustomer,
+        date: new Date(),
+        status: "created",
+        user: mongoose.Types.ObjectId(req.currentUser.id),
+        descriptions: [requestDescription._id]
+      });
+      await request.save();
+
+      request = await schemas.Request.findById(request._id)
+        .populate("request_type")
+        .populate({
+          path: "user",
+          populate: [
+            { path: 'role' }
+          ]
+        })
+        .populate("centerOfAttention")
 
 
-    res.json({ status: 'success', request, message: "Solicitud registrada exitosamente" });
-  } catch (error) {
-    console.log(error)
-    res.json({ status: 'error', message: error });
+      res.json({ status: 'success', request, message: "Solicitud registrada exitosamente" });
+    } catch (error) {
+      console.log(error)
+      res.json({ status: 'error', message: error });
 
+    }
+  } else {
+    res.json({ status: 'error', message: "Debe seleccionar un centro de atención" });
   }
 });
 
