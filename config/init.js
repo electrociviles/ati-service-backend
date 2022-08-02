@@ -1154,6 +1154,39 @@ exports.createRole = function () {
     schemas.Role.insertMany(list, function () { });
 
 }
+// exports.setItemImagesToDefault = async function () {
+//     let itemImages = await schemas.ItemImage.find()
+//     console.log(itemImages)
+//     itemImages.forEach(itemImage => {
+//         let newPhotos = itemImage.photos.map(photo => {
+//             photo.url = "default.png"
+//             return photo
+//         });
+//         schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(itemImage._id) }, {
+//             $set: {
+//                 photos: newPhotos
+//             }
+//         }, {
+//             multi: true
+//         }).exec();
+//     });
+// }
+exports.setItemBoardToDefault = async function () {
+    let itemsBoards = await schemas.ItemBoard.find()
+    itemsBoards.forEach(itemsBoard => {
+        let newPhotos = itemsBoard.photos.map(photo => {
+            photo.url = "default.png"
+            return photo
+        });
+        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(itemsBoard._id) }, {
+            $set: {
+                photos: newPhotos
+            }
+        }, {
+            multi: true
+        }).exec();
+    });
+}
 exports.createConfiguration = function () {
 
     var list = new Array()
@@ -1340,20 +1373,12 @@ exports.createMenuWeb = () => {
     })
     listPage.push(asignarRoles)
 
-    var values = new schemas.Page({
-        title: 'Valores',
-        href: '/values',
-        icon: 'ImSortNumbericDesc',
-        isParent: false,
-        roles: ['5a046fe9627e3526802b3847']
-    })
-    listPage.push(values)
+
 
     pageAjustes.children.push(usuarios._id)
     pageAjustes.children.push(clientes._id)
     pageAjustes.children.push(roles._id)
     pageAjustes.children.push(asignarRoles._id)
-    pageAjustes.children.push(values._id)
 
     menu.save()
 
@@ -1380,7 +1405,7 @@ exports.createMenuMobile = () => {
         href: 'requests',
         icon: 'RiCustomerService2Fill',
         isParent: false,
-        backgroundColor: 'E7D9F0',
+        backgroundColor: 'e4254e',
         iconColor: "FFFFFF",
         textColor: "FFFFFF",
         children: [],
@@ -1395,7 +1420,7 @@ exports.createMenuMobile = () => {
         href: 'maintenances',
         icon: 'RiCustomerService2Fill',
         isParent: false,
-        backgroundColor: 'EFF0D9',
+        backgroundColor: 'b663a4',
         iconColor: "FFFFFF",
         textColor: "FFFFFF",
         children: [],
@@ -1410,7 +1435,7 @@ exports.createMenuMobile = () => {
         href: 'attentions',
         icon: 'RiCustomerService2Fill',
         isParent: false,
-        backgroundColor: 'D9F0DF',
+        backgroundColor: '676d74',
         iconColor: "FFFFFF",
         textColor: "FFFFFF",
         children: [],
@@ -1418,6 +1443,22 @@ exports.createMenuMobile = () => {
     })
     listPage.push(attention)
     menu.pages.push(attention)
+
+    /** Reportes de mantenimientos */
+    var maintenancesReport = new schemas.Page({
+        title: 'Reporte de mantenimientos',
+        href: 'maintenances-reports',
+        icon: 'VscProject',
+        isParent: false,
+        backgroundColor: 'edb933',
+        iconColor: "FFFFFF",
+        textColor: "FFFFFF",
+        children: [],
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(maintenancesReport)
+    menu.pages.push(maintenancesReport)
+
 
     /** Reportes de solicitudes */
     var requestsReport = new schemas.Page({
@@ -1440,7 +1481,7 @@ exports.createMenuMobile = () => {
         href: 'attentions-reports',
         icon: 'VscProject',
         isParent: false,
-        backgroundColor: 'F0E3D9',
+        backgroundColor: 'ffb175',
         iconColor: "FFFFFF",
         textColor: "FFFFFF",
         children: [],
