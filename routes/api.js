@@ -706,7 +706,6 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
     schemas.Request.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         status: statusRequest,
-        file: fileName
       },
       $push: { "descriptions": requestDescription._id },
     }, {
