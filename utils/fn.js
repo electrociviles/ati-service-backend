@@ -642,7 +642,7 @@ const createAttention = async request => {
 
     let centerOfAttention = null;
     if (request.centerOfAttention) {
-        centerOfAttention = mongoose.Types.ObjectId(request.centerOfAttention);
+        centerOfAttention = mongoose.Types.ObjectId(request.centerOfAttention._id);
     }
 
     let count = await schemas.Attention.countDocuments();
