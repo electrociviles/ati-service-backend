@@ -624,7 +624,7 @@ const createAttention = async request => {
     items = await schemas.Item.find({ mode: { $in: ['attention'] } });
 
     let listAttentionImage = []
-    await fn.asyncForEach(items, async item => {
+    await asyncForEach(items, async item => {
         let attentionImage = new schemas.ItemImage({
             item: item._id,
             photos: [],
