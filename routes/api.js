@@ -1413,8 +1413,6 @@ router.post('/closeAttention', async (req, res) => {
 router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
 
   try {
-    console.log(req.body)
-    console.log(req.files)
     await fn.asyncForEach(req.files, async (file) => {
       let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
       let src = await fs.createReadStream(file.path);
@@ -1429,13 +1427,14 @@ router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) =>
         await image.quality(50);
         await image.writeAsync('./uploads/' + fileName);
 
+        let date = new Date()
         schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
-          $push: { photos: { url: fileName, type: 'remote', date: new Date() } },
+          $push: { photos: { url: fileName, type: 'remote', date } },
         }, {
           upsert: true
         }).exec();
 
-        res.json({ status: 'success', url: fileName });
+        res.json({ status: 'success', url: fileName, date });
 
       });
       src.on('error', (err) => {
