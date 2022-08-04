@@ -433,6 +433,7 @@ router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, r
 })
 
 router.post('/listRequests', authMiddleware, async (req, res) => {
+  console.log(req.body)
   let allowedRole = true;
   let currentUser = await schemas.User.findById(req.currentUser.id);
 
