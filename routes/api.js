@@ -695,6 +695,24 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
       .populate("centerOfAttention")
       .populate("request_type");
 
+    var requestDescription = schemas.RequestDescription({
+      description: description,
+      status: statusRequest,
+      date: new Date(),
+      user: mongoose.Types.ObjectId(req.currentUser.id),
+    });
+
+    requestDescription.save();
+    schemas.Request.updateOne({ _id: mongoose.Types.ObjectId(req.body.id) }, {
+      $set: {
+        status: statusRequest,
+        file: fileName
+      },
+      $push: { "descriptions": requestDescription._id },
+    }, {
+      multi: true
+    }).exec()
+
     let tokensFCMAdmins = await fn.getTokenFCMAdmins()
     let tokensFCMCustomers = await fn.getTokenFCMCustomer(request.customer)
 
