@@ -695,13 +695,13 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
       .populate("centerOfAttention")
       .populate("request_type");
 
-    var foundUsers = await schemas.User.find().where('_id').in(request.centerOfAttention.users);
-    var users = foundUsers.filter(user => user.tokenFCM);
-    var ids = users.map(user => user.tokenFCM);
+    let tokensFCMAdmins = await fn.getTokenFCMAdmins()
+    let tokensFCMCustomers = await fn.getTokenFCMCustomer(request.customer)
 
+    let tokens = [...tokensFCMAdmins, ...tokensFCMCustomers]
 
-    if (ids.length > 0) {
-      notification.sendNotification(ids, `Solicitud ${statusRequest == 'accept' ? 'Aprobada' : 'Rechazada'}`, `[${request.request_type.type}] ${request.description}`, {});
+    if (tokens) {
+      notification.sendNotification(tokens, `Alerta de solicitud`, `Solicitud ${statusRequest == 'accept' ? 'Aprobada' : 'Rechazada'}`, {});
     }
 
     if (statusRequest === 'accept') {
@@ -1154,7 +1154,7 @@ router.post('/createAttention', upload.any("pictures"), authMiddleware, async (r
     }).exec();
 
     let tokensFCM = fn.getTokenFCMAdmins()
-    let registration_ids = [tokenFCM];
+    let registration_ids = [tokensFCM];
     notification.sendNotification(registration_ids, 'Test', `Esto es una prueba`, data);
 
 
