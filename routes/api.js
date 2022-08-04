@@ -1467,6 +1467,8 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
       centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
     }
 
+    console.log(req.body);
+
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
         description: req.body.observations,
