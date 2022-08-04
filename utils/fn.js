@@ -650,9 +650,9 @@ const createAttention = async request => {
     let attention = new schemas.Attention({
         number: count + 1,
         attentionItems: listAttentionImage,
-        description: req.body.observations,
+        description: request.description,
         title: request.description,
-        names: request.description,
+        names: "",
         document: "",
         signature: "",
         status: "created",
