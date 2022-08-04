@@ -60,7 +60,7 @@ app.use(function (err, req, res, next) {
 
 let cronProcess = {
   semiAnnualMaintenance: {
-    status: true,
+    status: false,
     // times: '*/5 * * * * *'
     times: '*/10 * * * * *'
   }
@@ -97,6 +97,7 @@ server.listen(config.port, async function () {
   // init.UpdateProjectSetNewItems();
   // init.NewItem();
   // init.createRequestType();
+  // init.setItemBoardToDefault()
 
 
 });

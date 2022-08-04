@@ -47,7 +47,8 @@ router.post('/login', async (req, res, next) => {
   } else {
     res.json({ status: 'error', message: 'Usuario no encontrado' });
   }
-});
+})
+
 router.post('/refreshToken', async (req, res) => {
   const { refreshToken } = req.body
 
@@ -207,7 +208,6 @@ router.post('/listMaintenances', authMiddleware, async (req, res) => {
   }
 });
 
-
 router.post('/getAttention', authMiddleware, async (req, res) => {
 
   let query = schemas.Attention.findById(mongoose.Types.ObjectId(req.body.id)).populate({
@@ -271,10 +271,7 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
       break;
     default:
       allowedRole = false;
-
   }
-
-
 
   if (req.body.paginate) {
     query.skip(start)
@@ -436,6 +433,7 @@ router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, r
 })
 
 router.post('/listRequests', authMiddleware, async (req, res) => {
+  console.log(req.body)
   let allowedRole = true;
   let currentUser = await schemas.User.findById(req.currentUser.id);
 
@@ -444,6 +442,7 @@ router.post('/listRequests', authMiddleware, async (req, res) => {
     .populate("request_type")
     .populate("user")
     .populate("centerOfAttention")
+    .populate("customer")
     .sort({ '_id': -1 })
   let queryCount = schemas.Request.countDocuments();
 
@@ -725,22 +724,25 @@ router.post('/requestRejectConfirm', authMiddleware, async (req, res) => {
 
 router.post('/updateMenuRole', async (req, res) => {
 
-  let { status, idpage, idrole } = req.body;
+  let { pages, idrole } = req.body;
 
-  if (status) {
-    schemas.Page.updateOne({ "_id": mongoose.Types.ObjectId(idpage) }, {
-      $push: { roles: idrole }
-    }, {
-      multi: true
-    }).exec();
-  }
-  else {
-    schemas.Page.updateOne({ "_id": mongoose.Types.ObjectId(idpage) }, {
-      $pull: { roles: idrole }
-    }, {
-      multi: true
-    }).exec();
-  }
+  await fn.asyncForEach(pages, async pg => {
+    if (pg.status) {
+      schemas.Page.updateOne({ "_id": mongoose.Types.ObjectId(pg.page) }, {
+        $push: { roles: idrole }
+      }, {
+        multi: true
+      }).exec();
+    }
+    else {
+      schemas.Page.updateOne({ "_id": mongoose.Types.ObjectId(pg.page) }, {
+        $pull: { roles: idrole }
+      }, {
+        multi: true
+      }).exec();
+    }
+  })
+
 
   res.json({ status: 'success' });
 
@@ -1391,7 +1393,6 @@ router.post('/closeAttention', async (req, res) => {
   }
 });
 
-
 router.post('/updateImageItemBoard', upload.any("pictures"), async (req, res) => {
 
   try {
@@ -1702,7 +1703,7 @@ router.post('/updateToken', authMiddleware, async (req, res) => {
 /** Users */
 router.post('/listUsers', async (req, res) => {
 
-  let { start, end, paginate } = req.body;
+  let { start, end, paginate, withOutCenterOfAttention } = req.body;
 
   let query = schemas.User.find()
     .sort({ '_id': -1 })
@@ -1712,6 +1713,9 @@ router.post('/listUsers', async (req, res) => {
     query
       .skip(start)
       .limit(end)
+  }
+  if (withOutCenterOfAttention) {
+    query.where("centerOfAttention").in(null)
   }
 
   let count = await schemas.User.countDocuments();
@@ -1842,10 +1846,6 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
         });
       }
 
-      // const salt = await bcrypt.genSalt(10);
-      // let password = await bcrypt.hash(req.body.password, salt);
-
-
       let customer = null
       if (req.body.customer) {
         customer = mongoose.Types.ObjectId(req.body.customer);
@@ -1926,6 +1926,34 @@ router.post('/addPersonToCustomer', async (req, res) => {
 
     schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(person) }, {
       $set: { customer: customer },
+    }, {
+      multi: true
+    }).exec();
+
+
+    res.json({ status: 'success', message: 'Usuario agregado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al agregar el funcionario' });
+  }
+});
+
+router.post('/addUserToCenterOfAttention', async (req, res) => {
+  try {
+
+    let { user, centerOfAttention } = req.body;
+
+    console.log(req.body)
+
+    schemas.CenterOfAttention.updateOne({ "_id": mongoose.Types.ObjectId(centerOfAttention) }, {
+      $push: { users: mongoose.Types.ObjectId(user) },
+    }, {
+      multi: true
+    }).exec();
+
+    schemas.User.updateOne({ "_id": mongoose.Types.ObjectId(user) }, {
+      $set: { centerOfAttention: centerOfAttention },
     }, {
       multi: true
     }).exec();
@@ -2385,7 +2413,9 @@ router.post('/saveObservations', async (req, res) => {
   }
 });
 
-router.post('/sendReportMaintenance', async (req, res) => {
+router.post('/printMaintenance', async (req, res) => {
+
+  let { type } = req.body
   try {
     let maintenance = await schemas.Maintenance.findById(mongoose.Types.ObjectId(req.body.id),).populate({
       path: 'boards',
@@ -2410,7 +2440,6 @@ router.post('/sendReportMaintenance', async (req, res) => {
         path: "item"
       }]
     }).exec();
-
 
     let newBoards = maintenance.boards.map(board => {
 
@@ -2497,26 +2526,46 @@ router.post('/sendReportMaintenance', async (req, res) => {
 
     axios.post(config.pathServicePhp + 'maintenance.php', data)
       .then(async (response) => {
+        if (response.data.status == 'success') {
 
-        if (req.body.type == "email")
-          await fn.sendEmailMaintenance(response.data.data.id);
+          let base64 = '';
+          if (type == "email")
+            await fn.sendEmailMaintenance(response.data.data.id);
+          else if (type == "base64") {
+            const fs = require('fs');
+            base64 = fs.readFileSync(`./pdf/${maintenance._id}.pdf`, { encoding: 'base64' });
 
-        schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
-          $set: {
-            downloaded: true
           }
-        }, {
-          multi: true
-        }).exec();
+          if (type == 'download') {
+            schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
+              $set: {
+                downloaded: true
+              }
+            }, {
+              multi: true
+            }).exec();
+          }
 
-        res.json({
-          status: 'success',
-          data: data,
-          message: 'Reporte enviado exitosamente'
-        });
+          res.json({
+            status: 'success',
+            data: data,
+            base64,
+            message: 'Reporte enviado exitosamente'
+          });
+        } else {
+          console.log(response.data)
+          res.json({
+            status: 'error',
+            message: 'Error'
+          });
+        }
       })
       .catch(function (error) {
-        console.log(error);
+        console.log(error)
+        res.json({
+          status: 'error',
+          message: error
+        });
       });
 
   } catch (error) {
@@ -3022,6 +3071,7 @@ router.post('/printReportAttention', async (req, res) => {
     console.log("error", error);
   })
 })
+
 router.post('/requestsReport', authMiddleware, async (req, res) => {
 
   let { order, status, start, end, paginate, startDate, endDate, requestType, customer, centerOfAttention, source } = req.body
@@ -3069,6 +3119,7 @@ router.post('/requestsReport', authMiddleware, async (req, res) => {
   res.json({ status: 'success', requests, count, message: "Success" });
 
 })
+
 router.post('/requestReportExcel', authMiddleware, async (req, res) => {
 
   let { order, status, start, end, startDate, endDate, requestType, customer, centerOfAttention, source } = req.body
@@ -3159,6 +3210,7 @@ router.post('/requestReportExcel', authMiddleware, async (req, res) => {
 
 
 })
+
 router.post('/printRequest', async (req, res) => {
 
   let { id } = req.body;
@@ -3174,7 +3226,6 @@ router.post('/printRequest', async (req, res) => {
     request: request,
     total: 1000,
   }
-  console.log(JSON.stringify(data, null, 6))
 
   axios.post(`${config.jsReportClient}reports`, {
     shortid: 'Hyl9fp6c25',
@@ -3191,6 +3242,7 @@ router.post('/printRequest', async (req, res) => {
     console.log("error", error);
   })
 });
+
 router.post('/printRequests', async (req, res) => {
 
   let { order, status, start, startDate, endDate, end, requestType, customer, centerOfAttention, source } = req.body
@@ -3248,6 +3300,7 @@ router.post('/printRequests', async (req, res) => {
     console.log("error", error);
   })
 });
+
 router.post('/attentionsReport', authMiddleware, async (req, res) => {
 
   let { order, status, start, end, paginate, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
@@ -3311,6 +3364,7 @@ router.post('/attentionsReport', authMiddleware, async (req, res) => {
   res.json({ status: 'success', attentions, count, message: "Success" });
 
 });
+
 router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
   let { order, status, startDate, endDate, attentionType, customer, centerOfAttention, source } = req.body
 
@@ -3330,13 +3384,6 @@ router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
     }).populate({
       path: 'centerOfAttention',
     })
-  // .populate({
-  //   path: 'descriptions',
-  //   populate: [{
-  //     path: "customer"
-  //   }]
-  // });
-  let queryCount = schemas.Attention.countDocuments();
 
   query.where('date').gte(dates.start).lte(dates.end);
   if (attentionType) {
@@ -3362,6 +3409,7 @@ router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
   let attentions = await query.exec();
 
 
+
   var workbook = new excel.Workbook();
 
   var worksheet = workbook.addWorksheet('Reporte de solicitudes');
@@ -3380,6 +3428,7 @@ router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
   worksheet.cell(1, 6).string('TIPO').style(style);
   worksheet.cell(1, 7).string('CENTRO DE ATENCIÓN').style(style);
   worksheet.cell(1, 8).string('ESTADO').style(style);
+  worksheet.cell(1, 9).string('PRECIO').style(style);
 
   style = workbook.createStyle({
     font: {
@@ -3397,6 +3446,7 @@ router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
     worksheet.cell(row, 6).string(attention.attentionType.type).style(style);
     worksheet.cell(row, 7).string(attention.centerOfAttention ? attention.centerOfAttention.title : '').style(style);
     worksheet.cell(row, 8).string(attention.status).style(style);
+    worksheet.cell(row, 9).number(Number(attention.price)).style(style);
     row++;
   })
   await workbook.write('./excel/report.xlsx', "");
@@ -3411,6 +3461,7 @@ router.post('/attentionReportExcel', authMiddleware, async (req, res) => {
 
 
 });
+
 router.post('/attentionsReportPdf', async (req, res) => {
 
   console.log(req.body)
@@ -3482,6 +3533,241 @@ router.post('/attentionsReportPdf', async (req, res) => {
     console.log("error", error);
   })
 })
+
+router.post('/maintenancesReport', authMiddleware, async (req, res) => {
+
+  let { order, start, end, paginate, startDate, endDate, maintenanceType, customer, centerOfAttention, source } = req.body
+
+
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
+  let queryCount = schemas.Maintenance.countDocuments();
+  var query = schemas.Maintenance.find().populate({
+    path: 'boards',
+    populate: [{
+      path: "itemsBoards",
+      populate: [{
+        path: "item"
+      }]
+    }]
+  }).populate({
+    path: 'customer'
+  }).populate({
+    path: 'aroundItems',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'outletSampling',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'emergencylight',
+    populate: [{
+      path: "item"
+    }]
+  }).populate({
+    path: 'upsAutonomy',
+    populate: [{
+      path: "item"
+    }]
+  })
+    .populate('maintenanceType')
+    .populate('creator')
+    .populate('centerOfAttention')
+    .sort({ '_id': -1 });
+  query.where('date').gte(dates.start).lte(dates.end);
+
+  if (req.body.paginate) {
+    query.skip(start)
+      .limit(end);
+  }
+
+
+  if (maintenanceType && maintenanceType != '-1') {
+    query.where('type').equals(maintenanceType);
+    queryCount.where('type').equals(maintenanceType);
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+    queryCount.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
+
+  let maintenances = await query.exec();
+  let count = await queryCount.exec();
+  res.json({ status: 'success', message: "Success", maintenances, count });
+
+});
+router.post('/maintenancesReportPdf', authMiddleware, async (req, res) => {
+
+  let { order, startDate, endDate, maintenanceType, customer, centerOfAttention, source } = req.body
+
+
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
+  let queryCount = schemas.Maintenance.countDocuments();
+  var query = schemas.Maintenance.find().populate({
+    path: 'customer'
+  })
+    .populate('maintenanceType')
+    .populate('creator')
+    .populate('centerOfAttention')
+    .sort({ '_id': -1 });
+  query.where('date').gte(dates.start).lte(dates.end);
+
+  if (maintenanceType && maintenanceType != '-1') {
+    query.where('type').equals(maintenanceType);
+    queryCount.where('type').equals(maintenanceType);
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+    queryCount.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  let maintenances = await query.exec();
+
+  let total = 0;
+  maintenances.map(maintenance => {
+    total += maintenance.price
+  })
+  let data = {
+    maintenances,
+    total,
+  }
+
+  axios.post(`${config.jsReportClient}reports`, {
+    shortid: 'HklMFZJPac',
+    data
+  }).then(function (response) {
+    res.json({
+      status: 'success',
+      base64: response.data,
+      message: 'Documento generado exitosamente'
+    });
+
+  }).catch(function (error) {
+    console.log("error", error);
+  })
+
+
+});
+router.post('/maintenancesReportExcel', authMiddleware, async (req, res) => {
+  let { order, startDate, endDate, maintenanceType, customer, centerOfAttention, source } = req.body
+  let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
+  let queryCount = schemas.Maintenance.countDocuments();
+  var query = schemas.Maintenance.find().populate({
+    path: 'customer'
+  })
+    .populate('maintenanceType')
+    .populate('creator')
+    .populate('centerOfAttention')
+    .sort({ '_id': -1 });
+  query.where('date').gte(dates.start).lte(dates.end);
+
+  if (maintenanceType && maintenanceType != '-1') {
+    query.where('type').equals(maintenanceType);
+    queryCount.where('type').equals(maintenanceType);
+  }
+  if (customer) {
+    query.where('customer').equals(mongoose.Types.ObjectId(customer));
+    queryCount.where('customer').equals(mongoose.Types.ObjectId(customer));
+  }
+  if (centerOfAttention) {
+    query.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+    queryCount.where('centerOfAttention').equals(mongoose.Types.ObjectId(centerOfAttention));
+  }
+  if (order) {
+    if (order.key == 'mas') {
+      query.sort({ "_id": -1 });
+    } else {
+      query.sort({ "_id": 1 });
+    }
+  }
+  let maintenances = await query.exec();
+
+  let total = 0;
+  maintenances.map(maintenance => {
+    total += maintenance.price
+  })
+  let data = {
+    maintenances,
+    total,
+  }
+
+  var workbook = new excel.Workbook();
+
+  var worksheet = workbook.addWorksheet('Reporte de solicitudes');
+  var style = workbook.createStyle({
+    font: {
+      color: '#000000',
+      size: 12
+    },
+    bold: true,
+  });
+  worksheet.cell(1, 1).string('FECHA').style(style);
+  worksheet.cell(1, 2).string('TIPO').style(style);
+  worksheet.cell(1, 3).string('CLIENTE').style(style);
+  worksheet.cell(1, 4).string('CREADOR').style(style);
+  worksheet.cell(1, 5).string('NOMBRE').style(style);
+  worksheet.cell(1, 6).string('DESCRIPCIÓN').style(style);
+  worksheet.cell(1, 7).string('CENTRO DE ATENCIÓN').style(style);
+  worksheet.cell(1, 9).string('PRECIO').style(style);
+
+  style = workbook.createStyle({
+    font: {
+      color: '#000000',
+      size: 12
+    },
+  });
+  let row = 2;
+  maintenances.map(maintenance => {
+    worksheet.cell(row, 1).date(maintenance.date.toString()).style(style);
+    worksheet.cell(row, 2).string(maintenance.type == 'tri' ? "Trifásico" : "Monofásico").style(style);
+    worksheet.cell(row, 3).string(maintenance.customer ? maintenance.customer.name : '').style(style);
+    worksheet.cell(row, 4).string(maintenance.creator ? maintenance.creator.name : '').style(style);
+    worksheet.cell(row, 5).string(maintenance.name).style(style);
+    worksheet.cell(row, 6).string(maintenance.description).style(style);
+    worksheet.cell(row, 7).string(maintenance.centerOfmaintenance ? maintenance.centerOfmaintenance.title : '').style(style);
+    worksheet.cell(row, 8).number(Number(maintenance.price)).style(style);
+    row++;
+  })
+  await workbook.write('./excel/report.xlsx', "");
+  var interval = setInterval(() => {
+    if (fs.existsSync('./excel/report.xlsx')) {
+      const fs = require('fs');
+      const contents = fs.readFileSync('./excel/report.xlsx', { encoding: 'base64' });
+      res.json({ status: "success", "base64": contents });
+      clearInterval(interval);
+    }
+  }, 1000);
+
+
+
+});
 
 
 module.exports = router;
