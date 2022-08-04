@@ -646,6 +646,15 @@ const createAttention = async request => {
     }
 
     let count = await schemas.Attention.countDocuments();
+    let attentionType = null;
+
+    let attentionTypes = await schemas.AttentionType.find();
+    attentionTypes.forEach(currentAttentionType => {
+        if (request.request_type.tag == currentAttentionType.tag) {
+            attentionType = currentAttentionType._id
+        }
+    })
+
 
     let attention = new schemas.Attention({
         number: count + 1,
@@ -660,7 +669,7 @@ const createAttention = async request => {
         price: parseFloat(0),
         customer: mongoose.Types.ObjectId(request.customer),
         creator: mongoose.Types.ObjectId(request.user),
-        attentionType: mongoose.Types.ObjectId(request.request_type),
+        attentionType: mongoose.Types.ObjectId(attentionType),
         centerOfAttention: centerOfAttention,
         presave: true
     });
