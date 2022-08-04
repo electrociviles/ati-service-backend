@@ -1060,31 +1060,33 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
   // console.log(JSON.stringify(req.body, null, 6))
 
   try {
-    await fn.asyncForEach(req.files, async (file, index) => {
-      let src = fs.createReadStream(file.path);
-      let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
-      let outStream = await fs.createWriteStream('./uploads/' + fileName);
-      src.pipe(outStream);
+    if (req.files) {
+      await fn.asyncForEach(req.files, async (file, index) => {
+        let src = fs.createReadStream(file.path);
+        let fileName = fn.makedId(10) + "." + fn.fileExtension(file.originalname)
+        let outStream = await fs.createWriteStream('./uploads/' + fileName);
+        src.pipe(outStream);
 
-      src.on('end', async () => {
-        fs.unlinkSync(file.path);
+        src.on('end', async () => {
+          fs.unlinkSync(file.path);
 
-        const Jimp = require('jimp');
-        const image = await Jimp.read('./uploads/' + fileName);
-        await image.resize(400, Jimp.AUTO);
-        await image.quality(50);
-        await image.writeAsync('./uploads/' + fileName);
+          const Jimp = require('jimp');
+          const image = await Jimp.read('./uploads/' + fileName);
+          await image.resize(400, Jimp.AUTO);
+          await image.quality(50);
+          await image.writeAsync('./uploads/' + fileName);
 
+        });
+        src.on('error', (err) => {
+          console.log(err)
+        });
+        schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
+          $push: { photos: { url: fileName, type: 'remote' } }
+        }, {
+          multi: true
+        }).exec();
       });
-      src.on('error', (err) => {
-        console.log(err)
-      });
-      schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(file.fieldname) }, {
-        $push: { photos: { url: fileName, type: 'remote' } }
-      }, {
-        multi: true
-      }).exec();
-    });
+    }
     for (var key in req.body) {
       if (key.length == 24 && parseFloat(req.body[key]) > 0) {
 
@@ -1095,7 +1097,6 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
         }).exec();
       }
     }
-
     if (req.body.observation.toString().trim().length > 0) {
       schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(req.body.board) }, {
         $set: { observation: req.body.observation }
@@ -1105,6 +1106,8 @@ router.post('/saveBoard', upload.any("pictures"), async (req, res) => {
     }
 
     res.json({ status: 'success' });
+
+
   } catch (error) {
     console.log(error);
     res.json({ status: 'error' });
