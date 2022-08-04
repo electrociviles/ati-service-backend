@@ -405,7 +405,7 @@ router.post('/getRequest', upload.any("files"), authMiddleware, async (req, res)
 
 router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, res) => {
 
-  let { id, observation, requestType } = req.body;
+  let { id, description, requestType } = req.body;
 
   let request = await schemas.Request.findById(mongoose.Types.ObjectId(id));
 
@@ -418,7 +418,7 @@ router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, r
 
     schemas.Request.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
       $set: {
-        description: observation,
+        description: description,
         request_type: mongoose.Types.ObjectId(requestType),
         centerOfAttention,
       }
@@ -1467,7 +1467,6 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
       centerOfAttention = mongoose.Types.ObjectId(req.body.centerOfAttention);
     }
 
-    console.log(req.body);
 
     schemas.Attention.updateOne({ "_id": mongoose.Types.ObjectId(req.body.id) }, {
       $set: {
