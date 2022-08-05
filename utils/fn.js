@@ -167,7 +167,11 @@ const sendEmailBoard = board => {
             let emails = [...emailsCustomer, ...emailsAdmins]
             console.log('................')
             console.log(emails)
-            mailer.emailBoard(board, emails);
+            if (emails.length > 0) {
+                mailer.emailBoard(board, emails);
+            } else {
+                console.log("No se encontraron correos")
+            }
 
             resolve(true);
 
