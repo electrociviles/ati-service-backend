@@ -3740,6 +3740,12 @@ router.post('/maintenancesReportExcel', authMiddleware, async (req, res) => {
   });
   let row = 2;
   maintenances.map(maintenance => {
+    console.log("mantenance.date ", maintenance.date)
+    console.log("maintenance.type ", maintenance.type)
+    console.log("mantenance.customer ", maintenance.customer)
+    console.log("mantenance.creator ", maintenance.creator)
+    console.log("mantenance.price ", maintenance.price)
+
     worksheet.cell(row, 1).date(maintenance.date.toString()).style(style);
     worksheet.cell(row, 2).string(maintenance.type == 'tri' ? "Trifásico" : "Monofásico").style(style);
     worksheet.cell(row, 3).string(maintenance.customer ? maintenance.customer.name : '').style(style);
