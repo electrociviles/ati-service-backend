@@ -566,8 +566,6 @@ router.post('/updatedBoard', async (req, res) => {
 
 router.post('/updateAttentionWeb', upload.any("files"), authMiddleware, async (req, res) => {
 
-  console.log(req.body)
-  console.log(req.files)
 
   let { id, name, description } = req.body
 
@@ -1430,7 +1428,12 @@ router.post('/updateAttention', upload.any("pictures"), async (req, res) => {
 
   try {
 
-    let fileNameSign = '';
+    console.log(req.body)
+    console.log(req.files)
+
+    let attention = await schemas.Attention.findById(req.body.id)
+
+    let fileNameSign = attention.signature;
 
 
     if (req.files) {
