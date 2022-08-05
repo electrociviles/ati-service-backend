@@ -1214,48 +1214,19 @@ router.post('/finishBoard', async (req, res) => {
         multi: true
       }).exec();
 
-      var foundUsers = await schemas.User.aggregate([{
-        $match: {
-          '_id': {
-            '$in': board.maintenance.customer.users
-          }
-        },
-      }, {
-        $project: {
-          username: 1,
-          tokenFCM: 1,
-          role: 1,
-        }
-      }, {
-        $lookup: {
-          from: "roles",
-          localField: "role",
-          foreignField: "_id",
-          as: "role"
-        }
-      }, {
-        $unwind: { path: "$role" }
-      }, {
-        $match:
-        {
-          "role.tag": {
-            $in: ["construction_manager", "maintenance_manager"]
-          }
-        }
-      }
-      ])
 
-      console.log("foundUsers    ", foundUsers)
-      var users = foundUsers.filter(user => user.tokenFCM);
-      var ids = users.map(user => user.tokenFCM);
+      let tokensFCMAdmins = await fn.getTokenFCMAdmins()
+      let tokensFCMCustomers = await fn.getTokenFCMCustomer(board.maintenance.customer._id)
 
-      if (ids.length > 0) {
+      let tokens = [...tokensFCMAdmins, ...tokensFCMCustomers]
+
+      if (tokens.length > 0) {
         setTimeout(() => {
-          notification.sendNotification(ids, 'Tablero finalizado', `[${board.type == 'tri' ? "Trifásico" : "Monofásico"}] ${board.name}`, {});
+          notification.sendNotification(tokens, 'Tablero finalizado', `[${board.type == 'tri' ? "Trifásico" : "Monofásico"}] ${board.name}`, {});
         }, 4000);
       }
 
-      // await fn.sendEmailBoard(req.body.id);
+      await fn.sendEmailBoard(board);
 
       res.json({
         status: 'success',

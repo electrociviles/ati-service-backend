@@ -39,6 +39,41 @@ exports.emailMaintenance = (maintenance, link) => {
 
     })
 }
+exports.emailBoard = (board, emails) => {
+    var nodemailer = require("nodemailer");
+    nodemailer.createTestAccount((err, account) => {
+
+        let transporter = nodemailer.createTransport({
+            host: 'mail.privateemail.com',
+            port: 465,
+            secureConnection: true,
+            auth: {
+                user: "informes@atiservicios.com",
+                pass: "Ati2022#*"
+            }
+        });
+
+        let html = `
+        <h2>Hola ${board.maintenance.customer.name}</h2>
+        <p>El tablero <b>${maintenance.name}</b> fue finalizado exitosamente</p>
+        </div>`
+        let mailOptions = {
+            from: `"Cierre de tablero" <${emailSender}>`,
+            to: emails,
+            subject: '📎',
+            html,
+        }
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                return console.log(error);
+            }
+            console.log('Message sent: %s', info.messageId);
+            console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+        })
+
+    })
+}
 exports.emailAttention = (attention, attachments, emails) => {
     var nodemailer = require("nodemailer");
     nodemailer.createTestAccount((err, account) => {

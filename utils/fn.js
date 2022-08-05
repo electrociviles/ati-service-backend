@@ -153,6 +153,32 @@ const sendEmailAttention = (id, action) => {
     });
 }
 
+const sendEmailBoard = board => {
+
+    return new Promise(async (resolve, reject) => {
+        try {
+
+            let emailsCustomer = await getEmailCustomer(board.maintenance.customer._id)
+            emailsCustomer = emailsCustomer.map(email => email.email)
+
+            let emailsAdmins = await getEmailAdmins()
+            emailsAdmins = emailsAdmins.map(email => email.email != email.email)
+
+            let emails = [...emailsCustomer, ...emailsAdmins]
+            mailer.emailBoard(attention, emails);
+
+            resolve(true);
+
+        } catch (error) {
+            console.log(error);
+            reject({
+                status: 'error',
+                message: 'Ocurrió un error al enviar el correo'
+            });
+        }
+    });
+}
+
 const validateAttention = attention => {
     let errors = 0;
     if (attention.signature.length == 0) {
@@ -726,5 +752,6 @@ module.exports = {
     getEmailCustomer,
     createAttention,
     getTokenFCMAdmins,
-    getTokenFCMCustomer
+    getTokenFCMCustomer,
+    sendEmailBoard
 };
