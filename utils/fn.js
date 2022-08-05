@@ -377,7 +377,12 @@ const getEmailCustomer = customer => {
             }
         }])
 
-        resolve(emails);
+        const newEmails = emails.filter(email => {
+            if (email != null)
+                return email
+        })
+
+        resolve(newEmails);
     })
 
 
@@ -416,8 +421,13 @@ const getEmailAdmins = () => {
                 email: 1
             }
         }])
+        const newEmails = emails.filter(email => {
+            if (email != null)
+                return email
+        })
 
-        resolve(emails);
+
+        resolve(newEmails);
     })
 
 
