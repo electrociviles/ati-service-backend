@@ -348,6 +348,13 @@ const getEmailCustomer = customer => {
     return new Promise(async (resolve, _) => {
         let emails = await schemas.User.aggregate([{
             $match: {
+                "email": {
+                    $exists: true,
+                    $ne: null
+                }
+            }
+        }, {
+            $match: {
                 'customer': mongoose.Types.ObjectId(customer)
             }
         }, {
@@ -381,10 +388,7 @@ const getEmailCustomer = customer => {
             }
         }])
 
-        const newEmails = emails.filter(email => {
-            if (email != null && email != false)
-                return email
-        })
+        const newEmails = emails.map(email => email.email)
 
         resolve(newEmails);
     })
@@ -396,6 +400,14 @@ const getEmailAdmins = () => {
 
     return new Promise(async (resolve, _) => {
         let emails = await schemas.User.aggregate([{
+            $match: {
+                "email": {
+                    $exists: true,
+                    $ne: null
+                }
+            }
+        },
+        {
             $project: {
                 name: 1,
                 email: 1,
@@ -428,10 +440,7 @@ const getEmailAdmins = () => {
 
         console.log("xxxxxxxxxxxxx")
         console.log(emails)
-        const newEmails = emails.filter(email => {
-            if (email != null && email != false)
-                return email
-        })
+        const newEmails = emails.map(email => email.email)
 
 
         resolve(newEmails);
