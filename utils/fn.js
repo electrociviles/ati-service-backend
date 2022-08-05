@@ -82,7 +82,7 @@ const sendEmailMaintenance = maintenance => {
 
 
             const HummusRecipe = require('hummus-recipe');
-            const pdfDoc = new HummusRecipe(`./pdf/${id}.pdf`, `./pdf/${id}.pdf`);
+            const pdfDoc = new HummusRecipe(`./pdf/${maintenance._id}.pdf`, `./pdf/${maintenance._id}.pdf`);
 
             pdfDoc.encrypt({
                 userPassword: maintenance.customer.nit,
@@ -90,7 +90,7 @@ const sendEmailMaintenance = maintenance => {
                 userProtectionFlag: 4
             }).endPDF();
 
-            let link = `${config.urlPdf}${id}.pdf`;
+            let link = `${config.urlPdf}${maintenance._id}.pdf`;
             mailer.emailMaintenance(maintenance, link);
 
             resolve(true);

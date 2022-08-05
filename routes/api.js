@@ -2429,132 +2429,139 @@ router.post('/printMaintenance', async (req, res) => {
       }]
     }).exec();
 
-    let newBoards = maintenance.boards.map(board => {
+    if (maintenance.customer.email) {
+      let newBoards = maintenance.boards.map(board => {
 
-      let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
-      let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
-      let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
-      let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
-      let tmpCellsFinding = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'finding')
+        let tmpCellsBefore = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'before')
+        let tmpCellsVoltaje = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'voltaje')
+        let tmpCellsCorriente = board.itemsBoards.filter(itemBoard => itemBoard.item.type == 'corriente')
+        let tmpCellsAfter = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'after')
+        let tmpCellsFinding = board.itemsBoards.filter(itemBoard => itemBoard.item.mode == 'finding')
 
-      let cellsBefore = tmpCellsBefore.map(cellBefore => {
-        if (cellBefore.photos.length == 0) {
-          cellBefore.photos = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return cellBefore
-      });
-      let cellsVoltaje = tmpCellsVoltaje.map(cellVoltaje => {
-        if (cellVoltaje.photos.length == 0) {
-          cellVoltaje.photos = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return cellVoltaje
-      });
-      let cellsCorriente = tmpCellsCorriente.map(cellCorriente => {
-        if (cellCorriente.photos.length == 0) {
-          cellCorriente.photos = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return cellCorriente
-      });
-      let cellsAfter = tmpCellsAfter.map(cellAfter => {
-        if (cellAfter.photos.length == 0) {
-          cellAfter.photos = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return cellAfter
-      });
-      let cellsFinding = tmpCellsFinding.map(cellFinding => {
-        if (cellFinding.photos.length == 0) {
-          cellFinding.photos = [{
-            url: 'default.png',
-            type: 'remote'
-          }]
-        }
-        return cellFinding
-      });
+        let cellsBefore = tmpCellsBefore.map(cellBefore => {
+          if (cellBefore.photos.length == 0) {
+            cellBefore.photos = [{
+              url: 'default.png',
+              type: 'remote'
+            }]
+          }
+          return cellBefore
+        });
+        let cellsVoltaje = tmpCellsVoltaje.map(cellVoltaje => {
+          if (cellVoltaje.photos.length == 0) {
+            cellVoltaje.photos = [{
+              url: 'default.png',
+              type: 'remote'
+            }]
+          }
+          return cellVoltaje
+        });
+        let cellsCorriente = tmpCellsCorriente.map(cellCorriente => {
+          if (cellCorriente.photos.length == 0) {
+            cellCorriente.photos = [{
+              url: 'default.png',
+              type: 'remote'
+            }]
+          }
+          return cellCorriente
+        });
+        let cellsAfter = tmpCellsAfter.map(cellAfter => {
+          if (cellAfter.photos.length == 0) {
+            cellAfter.photos = [{
+              url: 'default.png',
+              type: 'remote'
+            }]
+          }
+          return cellAfter
+        });
+        let cellsFinding = tmpCellsFinding.map(cellFinding => {
+          if (cellFinding.photos.length == 0) {
+            cellFinding.photos = [{
+              url: 'default.png',
+              type: 'remote'
+            }]
+          }
+          return cellFinding
+        });
 
-      let newBoard = {
-        cellsBefore,
-        cellsVoltaje,
-        cellsCorriente,
-        cellsAfter,
-        cellsFinding,
-        boardName: board.name,
-        observation: board.observation,
+        let newBoard = {
+          cellsBefore,
+          cellsVoltaje,
+          cellsCorriente,
+          cellsAfter,
+          cellsFinding,
+          boardName: board.name,
+          observation: board.observation,
+        }
+        return newBoard;
+
+      })
+
+      let data = {
+        id: maintenance._id,
+        date: fn.getDateReport(),
+        name: maintenance.name,
+        type: maintenance.type === 'tri' ? 'Trifásico' : 'Monofásico',
+        customer: maintenance.customer,
+        boards: newBoards,
+        aroundItems: maintenance.aroundItems,
+        outletSampling: maintenance.outletSampling,
+        pathServicePhp: config.pathSavePdf
       }
-      return newBoard;
 
-    })
+      if (fs.existsSync(`./pdf/${maintenance._id}.pdf`)) {
+        fs.unlinkSync(`./pdf/${maintenance._id}.pdf`);
+      }
 
-    let data = {
-      id: maintenance._id,
-      date: fn.getDateReport(),
-      name: maintenance.name,
-      type: maintenance.type === 'tri' ? 'Trifásico' : 'Monofásico',
-      customer: maintenance.customer,
-      boards: newBoards,
-      aroundItems: maintenance.aroundItems,
-      outletSampling: maintenance.outletSampling,
-      pathServicePhp: config.pathSavePdf
-    }
+      axios.post(config.pathServicePhp + 'maintenance.php', data)
+        .then(async (response) => {
+          if (response.data.status == 'success') {
 
-    if (fs.existsSync(`./pdf/${maintenance._id}.pdf`)) {
-      fs.unlinkSync(`./pdf/${maintenance._id}.pdf`);
-    }
+            let base64 = '';
+            if (type == "email")
+              await fn.sendEmailMaintenance(maintenance);
+            else if (type == "base64") {
+              const fs = require('fs');
+              base64 = fs.readFileSync(`./pdf/${maintenance._id}.pdf`, { encoding: 'base64' });
 
-    axios.post(config.pathServicePhp + 'maintenance.php', data)
-      .then(async (response) => {
-        if (response.data.status == 'success') {
+            }
+            if (type == 'download') {
+              schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
+                $set: {
+                  downloaded: true
+                }
+              }, {
+                multi: true
+              }).exec();
+            }
 
-          let base64 = '';
-          if (type == "email")
-            await fn.sendEmailMaintenance(maintenance);
-          else if (type == "base64") {
-            const fs = require('fs');
-            base64 = fs.readFileSync(`./pdf/${maintenance._id}.pdf`, { encoding: 'base64' });
-
+            res.json({
+              status: 'success',
+              data: data,
+              base64,
+              message: 'Reporte enviado exitosamente'
+            });
+          } else {
+            console.log(response.data)
+            res.json({
+              status: 'error',
+              message: 'Error'
+            });
           }
-          if (type == 'download') {
-            schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
-              $set: {
-                downloaded: true
-              }
-            }, {
-              multi: true
-            }).exec();
-          }
-
-          res.json({
-            status: 'success',
-            data: data,
-            base64,
-            message: 'Reporte enviado exitosamente'
-          });
-        } else {
-          console.log(response.data)
+        })
+        .catch(function (error) {
+          console.log(error)
           res.json({
             status: 'error',
-            message: 'Error'
+            message: error
           });
-        }
-      })
-      .catch(function (error) {
-        console.log(error)
-        res.json({
-          status: 'error',
-          message: error
         });
+    } else {
+      res.json({
+        status: 'error',
+        message: 'El cliente ' + maintenance.customer.name + " no tiene correo"
       });
+    }
 
   } catch (error) {
     console.log(error);
