@@ -75,27 +75,23 @@ const fileExtension = fileName => {
     return fileName.slice((fileName.lastIndexOf(".") - 1 >>> 0) + 2);
 }
 
-const sendEmailMaintenance = id => {
-
+const sendEmailMaintenance = maintenance => {
 
     return new Promise(async (resolve, reject) => {
         try {
 
 
-            let maintenance = await schemas.Maintenance.findById(mongoose.Types.ObjectId(id));
-            let customer = await schemas.Customer.findById(mongoose.Types.ObjectId(maintenance.customer));
-
             const HummusRecipe = require('hummus-recipe');
             const pdfDoc = new HummusRecipe(`./pdf/${id}.pdf`, `./pdf/${id}.pdf`);
 
             pdfDoc.encrypt({
-                userPassword: customer.nit,
-                ownerPassword: customer.nit,
+                userPassword: maintenance.customer.nit,
+                ownerPassword: maintenance.customer.nit,
                 userProtectionFlag: 4
             }).endPDF();
 
             let link = `${config.urlPdf}${id}.pdf`;
-            mailer.emailMaintenance(customer, maintenance, link);
+            mailer.emailMaintenance(maintenance, link);
 
             resolve(true);
 
@@ -159,23 +155,12 @@ const sendEmailBoard = board => {
         try {
 
             let emailsCustomer = await getEmailCustomer(board.maintenance.customer._id)
-            console.log("\n")
-            console.log('emailsCustomer ', emailsCustomer)
-
             emailsCustomer = emailsCustomer.map(email => email.email)
 
             let emailsAdmins = await getEmailAdmins()
-            console.log("\n")
-            console.log('emailsAdmins ', emailsAdmins)
-
             emailsAdmins = emailsAdmins.map(email => email.email)
 
-
-            console.log("\n")
-            console.log('emailsAdmins ', emailsAdmins)
             let emails = [...emailsCustomer, ...emailsAdmins]
-            console.log('................')
-            console.log(emails)
             if (emails.length > 0) {
                 mailer.emailBoard(board, emails);
             } else {

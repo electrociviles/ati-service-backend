@@ -2417,7 +2417,6 @@ router.post('/printMaintenance', async (req, res) => {
       }]
     }).populate({
       path: 'customer',
-      select: { _id: 0, name: 1 }
     }).populate({
       path: 'aroundItems',
       populate: [{
@@ -2519,7 +2518,7 @@ router.post('/printMaintenance', async (req, res) => {
 
           let base64 = '';
           if (type == "email")
-            await fn.sendEmailMaintenance(response.data.data.id);
+            await fn.sendEmailMaintenance(maintenance);
           else if (type == "base64") {
             const fs = require('fs');
             base64 = fs.readFileSync(`./pdf/${maintenance._id}.pdf`, { encoding: 'base64' });
