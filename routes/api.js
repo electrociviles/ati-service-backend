@@ -926,7 +926,7 @@ router.post('/payMaintenance', async (req, res) => {
 
 })
 
-router.post('/createMaintenance', async (req, res) => {
+router.post('/createMaintenance', authMiddleware, async (req, res) => {
 
   if (req.body.centerOfAttention) {
     try {
@@ -947,6 +947,7 @@ router.post('/createMaintenance', async (req, res) => {
         downloaded: false,
         price: req.body.price,
         customer: mongoose.Types.ObjectId(req.body.customer),
+        creator: mongoose.Types.ObjectId(req.currentUser.id),
         status: "active",
         centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
         statusPayment: 'pending',
@@ -1532,8 +1533,10 @@ router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
         await image.quality(50);
         await image.writeAsync('./uploads/' + fileName);
 
+        let date = new Date()
+
         schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
-          $push: { photos: { url: fileName, type: 'remote' } }
+          $push: { photos: { url: fileName, type: 'remote', date } }
         }, {
           upsert: true
         }).exec();
@@ -1569,8 +1572,10 @@ router.post('/updateImageAttention', upload.any("pictures"), async (req, res) =>
         await image.quality(50);
         await image.writeAsync('./uploads/' + fileName);
 
+        let date = new Date()
+
         schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(req.body.itemImageID) }, {
-          $push: { photos: { url: fileName, type: 'remote' } }
+          $push: { photos: { url: fileName, type: 'remote', date } }
         }, {
           upsert: true
         }).exec();
@@ -3740,11 +3745,6 @@ router.post('/maintenancesReportExcel', authMiddleware, async (req, res) => {
   });
   let row = 2;
   maintenances.map(maintenance => {
-    console.log("mantenance.date ", maintenance.date)
-    console.log("maintenance.type ", maintenance.type)
-    console.log("mantenance.customer ", maintenance.customer)
-    console.log("mantenance.creator ", maintenance.creator)
-    console.log("mantenance.price ", maintenance.price)
 
     worksheet.cell(row, 1).date(maintenance.date.toString()).style(style);
     worksheet.cell(row, 2).string(maintenance.type == 'tri' ? "Trifásico" : "Monofásico").style(style);
