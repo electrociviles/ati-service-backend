@@ -55,7 +55,7 @@ exports.emailBoard = (board, emails) => {
 
         let html = `
         <h2>Hola ${board.maintenance.customer.name}</h2>
-        <p>El tablero <b>${maintenance.name}</b> fue finalizado exitosamente</p>
+        <p>El tablero <b>${board.name}</b> fue finalizado exitosamente</p>
         </div>`
         let mailOptions = {
             from: `"Cierre de tablero" <${emailSender}>`,

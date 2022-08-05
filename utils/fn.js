@@ -165,7 +165,9 @@ const sendEmailBoard = board => {
             emailsAdmins = emailsAdmins.map(email => email.email != email.email)
 
             let emails = [...emailsCustomer, ...emailsAdmins]
-            mailer.emailBoard(attention, emails);
+            console.log('................')
+            console.log(emails)
+            mailer.emailBoard(board, emails);
 
             resolve(true);
 
