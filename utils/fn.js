@@ -425,6 +425,9 @@ const getEmailAdmins = () => {
                 email: 1
             }
         }])
+
+        console.log("xxxxxxxxxxxxx")
+        console.log(emails)
         const newEmails = emails.filter(email => {
             if (email != null && email != false)
                 return email
