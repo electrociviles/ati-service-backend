@@ -139,6 +139,8 @@ router.post('/listMaintenances', authMiddleware, async (req, res) => {
   }).populate({
     path: 'customer'
   }).populate({
+    path: 'creator'
+  }).populate({
     path: 'aroundItems',
     populate: [{
       path: "item"
@@ -1541,7 +1543,7 @@ router.post('/updateImageItem', upload.any("pictures"), async (req, res) => {
           upsert: true
         }).exec();
 
-        res.json({ status: 'success', url: fileName });
+        res.json({ status: 'success', url: fileName, date });
 
       });
       src.on('error', (err) => {
@@ -1580,7 +1582,7 @@ router.post('/updateImageAttention', upload.any("pictures"), async (req, res) =>
           upsert: true
         }).exec();
 
-        res.json({ status: 'success', url: fileName });
+        res.json({ status: 'success', url: fileName, date });
 
       });
       src.on('error', (err) => {
