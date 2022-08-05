@@ -168,10 +168,11 @@ const sendEmailBoard = board => {
             console.log("\n")
             console.log('emailsAdmins ', emailsAdmins)
 
-            emailsAdmins = emailsAdmins.map(email => email.email != email.email)
+            emailsAdmins = emailsAdmins.map(email => email.email)
 
 
-
+            console.log("\n")
+            console.log('emailsAdmins ', emailsAdmins)
             let emails = [...emailsCustomer, ...emailsAdmins]
             console.log('................')
             console.log(emails)
