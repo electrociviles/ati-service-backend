@@ -159,15 +159,18 @@ const sendEmailBoard = board => {
         try {
 
             let emailsCustomer = await getEmailCustomer(board.maintenance.customer._id)
+            console.log("\n")
+            console.log('emailsCustomer ', emailsCustomer)
+
             emailsCustomer = emailsCustomer.map(email => email.email)
 
             let emailsAdmins = await getEmailAdmins()
+            console.log("\n")
+            console.log('emailsAdmins ', emailsAdmins)
+
             emailsAdmins = emailsAdmins.map(email => email.email != email.email)
 
-            console.log("\n")
-            console.log('emailsCustomer ', emailsCustomer)
-            console.log('emailsAdmins ', emailsAdmins)
-            console.log("\n")
+
 
             let emails = [...emailsCustomer, ...emailsAdmins]
             console.log('................')
