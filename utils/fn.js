@@ -382,7 +382,7 @@ const getEmailCustomer = customer => {
         }])
 
         const newEmails = emails.filter(email => {
-            if (email != null)
+            if (email != null && email != false)
                 return email
         })
 
@@ -426,7 +426,7 @@ const getEmailAdmins = () => {
             }
         }])
         const newEmails = emails.filter(email => {
-            if (email != null)
+            if (email != null && email != false)
                 return email
         })
 
