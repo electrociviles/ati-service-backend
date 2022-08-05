@@ -9,7 +9,7 @@ exports.emailMaintenance = (maintenance, link) => {
             port: 465,
             secureConnection: true,
             auth: {
-                user: "informes@atiservicios.com",
+                user: emailSender,
                 pass: "Ati2022#*"
             }
         });
@@ -23,7 +23,7 @@ exports.emailMaintenance = (maintenance, link) => {
         </p>
         </div>`
         let mailOptions = {
-            from: `"Cierre de tablero" <${maintenance.customer.email}>`,
+            from: `"Mantenimiento" <${emailSender}>`,
             to: maintenance.customer.email,
             subject: '📎',
             html,
@@ -48,7 +48,7 @@ exports.emailBoard = (board, emails) => {
             port: 465,
             secureConnection: true,
             auth: {
-                user: "informes@atiservicios.com",
+                user: emailSender,
                 pass: "Ati2022#*"
             }
         });
@@ -83,7 +83,7 @@ exports.emailAttention = (attention, attachments, emails) => {
             port: 465,
             secureConnection: true,
             auth: {
-                user: "informes@atiservicios.com",
+                user: emailSender,
                 pass: "Ati2022#*"
             }
         });
@@ -119,7 +119,7 @@ exports.emailSemiAnnual = (maintenance, emails) => {
             port: 465,
             secureConnection: true,
             auth: {
-                user: "informes@atiservicios.com",
+                user: emailSender,
                 pass: "Ati2022#*"
             }
         });
