@@ -1221,9 +1221,7 @@ router.post('/finishBoard', async (req, res) => {
       let tokens = [...tokensFCMAdmins, ...tokensFCMCustomers]
 
       if (tokens.length > 0) {
-        setTimeout(() => {
-          notification.sendNotification(tokens, 'Tablero finalizado', `[${board.type == 'tri' ? "Trifásico" : "Monofásico"}] ${board.name}`, {});
-        }, 4000);
+        // notification.sendNotification(tokens, 'Tablero finalizado', `[${board.type == 'tri' ? "Trifásico" : "Monofásico"}] ${board.name}`, {});
       }
 
       await fn.sendEmailBoard(board);

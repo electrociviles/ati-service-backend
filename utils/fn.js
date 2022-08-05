@@ -164,8 +164,11 @@ const sendEmailBoard = board => {
             let emailsAdmins = await getEmailAdmins()
             emailsAdmins = emailsAdmins.map(email => email.email != email.email)
 
+            console.log("\n")
             console.log('emailsCustomer ', emailsCustomer)
             console.log('emailsAdmins ', emailsAdmins)
+            console.log("\n")
+
             let emails = [...emailsCustomer, ...emailsAdmins]
             console.log('................')
             console.log(emails)
@@ -440,7 +443,7 @@ const getEmailAdmins = () => {
             }
         }])
 
-        console.log("xxxxxxxxxxxxx")
+        console.log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
         console.log(emails)
         const newEmails = emails.map(email => email.email)
 
