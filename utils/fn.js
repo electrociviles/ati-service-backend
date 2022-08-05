@@ -393,9 +393,7 @@ const getEmailCustomer = customer => {
             }
         }])
 
-        const newEmails = emails.map(email => email.email)
-
-        resolve(newEmails);
+        resolve(emails);
     })
 
 
@@ -442,13 +440,7 @@ const getEmailAdmins = () => {
                 email: 1
             }
         }])
-
-        console.log("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
-        console.log(emails)
-        const newEmails = emails.map(email => email.email)
-
-
-        resolve(newEmails);
+        resolve(emails);
     })
 
 
