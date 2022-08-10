@@ -486,18 +486,8 @@ router.post('/listCustomers', authMiddleware, async (req, res) => {
   var query = schemas.Customer.find();
   let queryCount = schemas.Customer.countDocuments();
 
-  // if (encargado && user) {}}
-  //   let usrEncargado = await schemas.User.findById(mongoose.Types.ObjectId(user));
-  //   query.where('_id').equals(mongoose.Types.ObjectId(usrEncargado.customer));
-  // }
-  // if (search) {
-  //   query.where('name').equals(new RegExp(search, "i"));
-  // }
-  // if (customer) {
-  //   query.where('_id').equals(mongoose.Types.ObjectId(customer));
-  // }
 
-
+  console.log("eq.currentUser.role ", req.currentUser.role.tag)
   switch (req.currentUser.role.tag) {
     case "administrator":
     case "ati":
