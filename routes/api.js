@@ -2493,6 +2493,16 @@ router.post('/printMaintenance', async (req, res) => {
       populate: [{
         path: "item"
       }]
+    }).populate({
+      path: 'emergencylight',
+      populate: [{
+        path: "item"
+      }]
+    }).populate({
+      path: 'upsAutonomy',
+      populate: [{
+        path: "item"
+      }]
     }).exec();
 
     if (maintenance.customer.email) {
@@ -2572,6 +2582,8 @@ router.post('/printMaintenance', async (req, res) => {
         boards: newBoards,
         aroundItems: maintenance.aroundItems,
         outletSampling: maintenance.outletSampling,
+        emergencylight: maintenance.emergencylight,
+        upsAutonomy: maintenance.upsAutonomy,
         pathServicePhp: config.pathSavePdf
       }
 
