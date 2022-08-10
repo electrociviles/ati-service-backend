@@ -139,6 +139,8 @@ router.post('/listMaintenances', authMiddleware, async (req, res) => {
   }).populate({
     path: 'customer'
   }).populate({
+    path: 'maintenanceType'
+  }).populate({
     path: 'creator'
   }).populate({
     path: 'aroundItems',
