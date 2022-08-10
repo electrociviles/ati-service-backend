@@ -126,7 +126,7 @@ router.post('/getMenu', async (req, res) => {
 
 router.post('/listMaintenances', authMiddleware, async (req, res) => {
 
-  let { start, end } = req.body;
+  let { start, end, downlFoaded } = req.body;
   let queryCount = schemas.Maintenance.countDocuments({ status: 'active' });
   var query = schemas.Maintenance.find({ status: 'active' }).populate({
     path: 'boards',
@@ -171,7 +171,6 @@ router.post('/listMaintenances', authMiddleware, async (req, res) => {
   let allowedRole = true;
 
 
-  console.log("req.currentUser.role.tag    ", req.currentUser.role.tag)
   switch (req.currentUser.role.tag) {
     case "administrator":
     case "technical":
@@ -229,8 +228,7 @@ router.post('/getAttention', authMiddleware, async (req, res) => {
 
 router.post('/listAttentions', authMiddleware, async (req, res) => {
   let { start, end } = req.body;
-  let currentUser = await schemas.User.findById(req.currentUser.id);
-  let allowedRole = true;
+  let currentUser = await schemas.User.findById(req.currentUser.id).populate('role');
 
   let queryCount = schemas.Attention.countDocuments({ status: 'created' });
   let query = schemas.Attention.find({ status: 'created' }).populate({
@@ -254,6 +252,7 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
   }).sort({ '_id': -1 });
 
 
+  console.log('currentUser.customer', req.currentUser.role.tag)
 
   switch (req.currentUser.role.tag) {
     case "administrator":
@@ -271,9 +270,8 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
       query.where('creator').equals(mongoose.Types.ObjectId(currentUser._id))
       queryCount.where('creator').equals(mongoose.Types.ObjectId(currentUser._id))
       break;
-    default:
-      allowedRole = false;
   }
+
 
   if (req.body.paginate) {
     query.skip(start)
@@ -283,9 +281,12 @@ router.post('/listAttentions', authMiddleware, async (req, res) => {
 
   if (req.body.search) {
     query.where('description').equals(new RegExp(req.body.search, "i"));
+    queryCount.where('description').equals(new RegExp(req.body.search, "i"));
   }
   let attentions = await query.exec();
-  let count = await schemas.Attention.countDocuments();
+  let count = await queryCount.exec();
+
+  console.log(req.body)
   res.json({ status: 'success', attentions, count });
 });
 
@@ -322,7 +323,7 @@ router.post('/listMaintenancesType', async (req, res) => {
 
 router.post('/createRequest', upload.any("files"), authMiddleware, async (req, res) => {
 
-  let currentUser = await schemas.User.findById(req.currentUser.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id).populate('role');
 
   let { description, requestType, centerOfAttention, customer } = req.body;
 
@@ -437,7 +438,7 @@ router.post('/updateRequest', upload.any("files"), authMiddleware, async (req, r
 router.post('/listRequests', authMiddleware, async (req, res) => {
   console.log(req.body)
   let allowedRole = true;
-  let currentUser = await schemas.User.findById(req.currentUser.id);
+  let currentUser = await schemas.User.findById(req.currentUser.id).populate('role');
 
   var query = schemas.Request.find()
     .select()
@@ -1876,14 +1877,35 @@ router.post('/createUser', upload.any("photo"), async (req, res) => {
         }, {
           multi: true
         }).exec();
+
+        let role = await schemas.Role.findById(req.body.role)
+        switch (role.tag) {
+          case 'maintenance_manager':
+          case 'construction_manager':
+            let centerOfAttentions = await schemas.CenterOfAttention.find({ customer: mongoose.Types.ObjectId(customer) })
+
+
+            await fn.asyncForEach(centerOfAttentions, async (centerOfAttention) => {
+
+              schemas.CenterOfAttention.updateOne({ _id: mongoose.Types.ObjectId(centerOfAttention._id) }, {
+                $push: { users: user._id }
+              }, {
+                multi: true
+              }).exec();
+            });
+
+            break;
+        }
       }
-      if (centerOfAttention) {
-        schemas.CenterOfAttention.updateOne({ "_id": centerOfAttention }, {
-          $push: { users: user },
-        }, {
-          multi: true
-        }).exec();
-      }
+
+
+      // if (centerOfAttention) {
+      //   schemas.CenterOfAttention.updateOne({ "_id": centerOfAttention }, {
+      //     $push: { users: user },
+      //   }, {
+      //     multi: true
+      //   }).exec();
+      // }
 
       res.json({ status: 'success' });
 
@@ -1930,6 +1952,24 @@ router.post('/addPersonToCustomer', async (req, res) => {
     }, {
       multi: true
     }).exec();
+
+    let user = await schemas.User.findById(person).populate('role')
+    switch (user.role.tag) {
+      case 'maintenance_manager':
+      case 'construction_manager':
+        let centerOfAttentions = await schemas.CenterOfAttention.find({ customer: mongoose.Types.ObjectId(customer) })
+
+        await fn.asyncForEach(centerOfAttentions, async (centerOfAttention) => {
+
+          schemas.CenterOfAttention.updateOne({ _id: mongoose.Types.ObjectId(centerOfAttention._id) }, {
+            $push: { users: user._id }
+          }, {
+            multi: true
+          }).exec();
+        });
+
+        break;
+    }
 
 
     res.json({ status: 'success', message: 'Usuario agregado exitosamente' });
@@ -1984,6 +2024,17 @@ router.post('/removePersonToCustomer', async (req, res) => {
     }, {
       multi: true
     }).exec();
+
+    let centerOfAttentions = await schemas.CenterOfAttention.find({ customer: mongoose.Types.ObjectId(customer) })
+    await fn.asyncForEach(centerOfAttentions, async (centerOfAttention) => {
+
+      schemas.CenterOfAttention.updateOne({ _id: mongoose.Types.ObjectId(centerOfAttention._id) }, {
+        $pull: { users: person }
+      }, {
+        multi: true
+      }).exec();
+    });
+
 
 
     res.json({ status: 'success', message: 'Usuario agregado exitosamente' });
@@ -3559,6 +3610,8 @@ router.post('/maintenancesReport', authMiddleware, async (req, res) => {
   }).populate({
     path: 'customer'
   }).populate({
+    path: 'maintenanceType'
+  }).populate({
     path: 'aroundItems',
     populate: [{
       path: "item"
@@ -3578,9 +3631,7 @@ router.post('/maintenancesReport', authMiddleware, async (req, res) => {
     populate: [{
       path: "item"
     }]
-  })
-    .populate('maintenanceType')
-    .populate('creator')
+  }).populate('creator')
     .populate('centerOfAttention')
     .sort({ '_id': -1 });
   query.where('date').gte(dates.start).lte(dates.end);

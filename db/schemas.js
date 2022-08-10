@@ -29,7 +29,7 @@ var CustomerSchema = new mongoose.Schema({
     email: String,
     phone: String,
     nit: String,
-    maintenanceType: { type: mongoose.Schema.Types.ObjectId, ref: 'Maintenance_Type' },
+    maintenanceType: { type: mongoose.Schema.Types.ObjectId, ref: 'maintenance_type' },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     centersOfAttention: [{ type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' }],
 
@@ -74,7 +74,7 @@ var MaintenanceTypeSchema = new mongoose.Schema({
     name: String,
     value: Number
 });
-var MaintenanceType = mongoose.model('Maintenance_Type', MaintenanceTypeSchema);
+var MaintenanceType = mongoose.model('maintenance_type', MaintenanceTypeSchema);
 
 
 var MaintenanceSchema = new mongoose.Schema({
@@ -92,7 +92,7 @@ var MaintenanceSchema = new mongoose.Schema({
     emergencylight: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     upsAutonomy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Item_Image' }],
     centerOfAttention: { type: mongoose.Schema.Types.ObjectId, ref: 'center_of_attention' },
-    maintenanceType: { type: mongoose.Schema.Types.ObjectId, ref: 'Maintenance_Type' },
+    maintenanceType: { type: mongoose.Schema.Types.ObjectId, ref: 'maintenance_type' },
     status: String,
     statusPayment: String,
     value: Number,

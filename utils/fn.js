@@ -384,8 +384,46 @@ const getEmailCustomer = customer => {
 
         resolve(emails);
     })
+}
 
+const getUsersFromCustomer = customer => {
 
+    return new Promise(async (resolve, _) => {
+        let users = await schemas.User.aggregate([{
+            $match: {
+                'customer': mongoose.Types.ObjectId(customer)
+            }
+        }, {
+            $project: {
+                name: 1,
+                role: 1,
+            }
+        }, {
+            $lookup: {
+                from: "roles",
+                localField: "role",
+                foreignField: "_id",
+                as: "role"
+            }
+        }, {
+            $unwind: { path: "$role" }
+        },
+        {
+            $match:
+            {
+                "role.tag": {
+                    $in: ["construction_manager", "maintenance_manager"]
+                }
+            }
+        },
+        {
+            $project: {
+                name: 1
+            }
+        }])
+
+        resolve(users);
+    })
 }
 
 const getEmailAdmins = () => {
@@ -767,5 +805,6 @@ module.exports = {
     createAttention,
     getTokenFCMAdmins,
     getTokenFCMCustomer,
-    sendEmailBoard
+    sendEmailBoard,
+    getUsersFromCustomer
 };
