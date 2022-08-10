@@ -955,6 +955,7 @@ router.post('/createMaintenance', authMiddleware, async (req, res) => {
         creator: mongoose.Types.ObjectId(req.currentUser.id),
         status: "active",
         centerOfAttention: mongoose.Types.ObjectId(req.body.centerOfAttention),
+        maintenanceType: mongoose.Types.ObjectId(customer.maintenanceType._id),
         statusPayment: 'pending',
         value: customer.maintenanceType.value,
         time: 'month',

@@ -621,6 +621,7 @@ const createMaintenance = async oldMaintenance => {
         statusPayment: '',
         centerOfAttention: mongoose.Types.ObjectId(oldMaintenance.centerOfAttention),
         value: customer.maintenanceType.value,
+        maintenanceType: mongoose.Types.ObjectId(customer.maintenanceType._id),
         time: 'month',
         expiration,
         statusAlertOne: 'pending',

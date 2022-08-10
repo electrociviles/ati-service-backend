@@ -1154,23 +1154,23 @@ exports.createRole = function () {
     schemas.Role.insertMany(list, function () { });
 
 }
-// exports.setItemImagesToDefault = async function () {
-//     let itemImages = await schemas.ItemImage.find()
-//     console.log(itemImages)
-//     itemImages.forEach(itemImage => {
-//         let newPhotos = itemImage.photos.map(photo => {
-//             photo.url = "default.png"
-//             return photo
-//         });
-//         schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(itemImage._id) }, {
-//             $set: {
-//                 photos: newPhotos
-//             }
-//         }, {
-//             multi: true
-//         }).exec();
-//     });
-// }
+exports.setItemImagesToDefault = async function () {
+    let itemImages = await schemas.ItemImage.find()
+    console.log(itemImages)
+    itemImages.forEach(itemImage => {
+        let newPhotos = itemImage.photos.map(photo => {
+            photo.url = "default.png"
+            return photo
+        });
+        schemas.ItemImage.updateOne({ "_id": mongoose.Types.ObjectId(itemImage._id) }, {
+            $set: {
+                photos: newPhotos
+            }
+        }, {
+            multi: true
+        }).exec();
+    });
+}
 exports.setItemBoardToDefault = async function () {
     let itemsBoards = await schemas.ItemBoard.find()
     itemsBoards.forEach(itemsBoard => {

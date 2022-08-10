@@ -97,7 +97,8 @@ server.listen(config.port, async function () {
   // init.UpdateProjectSetNewItems();
   // init.NewItem();
   // init.createRequestType();
-  // init.setItemBoardToDefault()
+  init.setItemBoardToDefault()
+  init.setItemImagesToDefault()
 
 
 });
