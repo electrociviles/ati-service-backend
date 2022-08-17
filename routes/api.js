@@ -937,12 +937,16 @@ router.post('/createMaintenance', authMiddleware, async (req, res) => {
       var expiration = new Date();
       expiration.setMonth(expiration.getMonth() + customer.maintenanceType.value);
 
+      let price = 0
+      if (req.body.price) {
+        price = req.body.price;
+      }
       let maintenance = new schemas.Maintenance({
         name: req.body.name,
         type: req.body.type,
         observation: req.body.observation,
         downloaded: false,
-        price: req.body.price,
+        price: price,
         customer: mongoose.Types.ObjectId(req.body.customer),
         creator: mongoose.Types.ObjectId(req.currentUser.id),
         status: "active",
