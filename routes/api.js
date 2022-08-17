@@ -162,7 +162,9 @@ router.post('/listMaintenances', authMiddleware, async (req, res) => {
     populate: [{
       path: "item"
     }]
-  }).sort({ '_id': -1 });
+  }).populate('creator')
+    .populate('centerOfAttention')
+    .sort({ '_id': -1 });
 
   if (req.body.paginate) {
     query.skip(start)
