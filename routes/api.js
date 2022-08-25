@@ -2066,6 +2066,7 @@ router.post('/restoreUser', async (req, res) => {
 router.post('/listCenterOfAttention', authMiddleware, async (req, res) => {
 
   let { start, end, paginate, customer } = req.body;
+  console.log(req.body)
 
   let currentUser = await schemas.User.findById(req.currentUser.id);
   let queryCount = schemas.CenterOfAttention.countDocuments();
@@ -2202,23 +2203,14 @@ router.post('/updateTimeExpiration', async (req, res) => {
 router.post('/createCenterOfAttention', async (req, res) => {
 
   let { name, description, customer } = req.body;
-  let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': req.body.title })
+  let centerOfAttention = await schemas.CenterOfAttention.findOne({ 'title': name })
   if (!centerOfAttention) {
 
     try {
-      let date = new Date();
 
       let centerOfAttention = schemas.CenterOfAttention({
         title: req.body.name,
-        valueSemiAnnual,
-        valueProvisioning,
-        timeSemiAnnual,
-        timeProvisioning,
         description: description,
-        expirationDateMaintenance: date,
-        provisioningAlertDate: date,
-        statusProvisioningAlertDate: 'pending',
-        statusAlertDateMaintenance: 'pending',
         customer: mongoose.Types.ObjectId(customer),
         status: 'active',
       });
