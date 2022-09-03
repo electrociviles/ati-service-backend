@@ -95,13 +95,14 @@ server.listen(config.port, async function () {
   // init.createAttentionType()
   // init.updateCustomerToUsers()
   // init.UpdateProjectSetNewItems();
-  init.NewItem();
-  init.NewItemFinding()
+  // init.NewItem();
+  // init.NewItemFinding()
   // init.createRequestType();
   // init.setItemBoardToDefault()
   // init.setItemImagesToDefault()
-  // init.CopperAluminumTable()
-  // init.addItemBoard()
+  init.CopperAluminumTable()
+  init.addItemBoard1()
+  init.addItemBoard2()
 
 
 });

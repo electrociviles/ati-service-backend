@@ -1467,12 +1467,36 @@ exports.setItemBoardToDefault = async function () {
         }).exec();
     });
 }
-exports.addItemBoard = async function () {
+exports.addItemBoard1 = async function () {
     let boards = await schemas.Board.find()
     await fn.asyncForEach(boards, async board => {
         let itemBoard = schemas.ItemBoard({
             board: board._id,
-            item: mongoose.Types.ObjectId('6311dec37a753854fca0ae62'),
+            item: mongoose.Types.ObjectId('63133cafcb13afaeafb18a29'),
+            status: 'activo',
+            photos: [],
+            percentBatery: 0.0,
+            value: 0.0,
+            caliber: null,
+            line_per_phase: 0,
+
+        });
+        await itemBoard.save();
+        await schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(board._id) }, {
+            $push: {
+                itemsBoards: itemBoard._id
+            }
+        }, {
+            multi: true
+        }).exec();
+    });
+}
+exports.addItemBoard2 = async function () {
+    let boards = await schemas.Board.find()
+    await fn.asyncForEach(boards, async board => {
+        let itemBoard = schemas.ItemBoard({
+            board: board._id,
+            item: mongoose.Types.ObjectId('63133cafcb13afaeafb18a28'),
             status: 'activo',
             photos: [],
             percentBatery: 0.0,
