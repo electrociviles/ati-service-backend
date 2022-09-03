@@ -2473,6 +2473,8 @@ router.post('/printMaintenance', async (req, res) => {
         match: { status: "activo" },
         populate: [{
           path: "item",
+        }, {
+          path: 'caliber'
         }]
       }]
     }).populate({
@@ -2598,13 +2600,13 @@ router.post('/printMaintenance', async (req, res) => {
 
             }
             if (type == 'download') {
-              schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
-                $set: {
-                  downloaded: true
-                }
-              }, {
-                multi: true
-              }).exec();
+              // schemas.Maintenance.updateOne({ "_id": mongoose.Types.ObjectId(maintenance._id) }, {
+              //   $set: {
+              //     downloaded: true
+              //   }
+              // }, {
+              //   multi: true
+              // }).exec();
             }
 
             res.json({
