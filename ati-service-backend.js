@@ -100,9 +100,9 @@ server.listen(config.port, async function () {
   // init.createRequestType();
   // init.setItemBoardToDefault()
   // init.setItemImagesToDefault()
-  init.CopperAluminumTable()
-  init.addItemBoard1()
-  init.addItemBoard2()
+  // init.CopperAluminumTable()
+  // init.addItemBoard1()
+  // init.addItemBoard2()
 
 
 });
