@@ -50,12 +50,12 @@ exports.NewItem = function () {
 
 
     var item = {
-        _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
-        mode: 'emergency_light',
-        title: "Iluminación de emergencia",
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        mode: 'protection_coordination',
+        title: "Coordinacion de proteccion",
         description: "",
-        group: 'emergency_light',
-        type: "emergency_light",
+        group: 'protection_coordination',
+        type: "protection_coordination",
         gallery: false,
         hasValue: false,
         position,
@@ -66,33 +66,12 @@ exports.NewItem = function () {
         colorTwo: colors.transparent,
         textColorOne: colors.transparent,
         textColorTwo: colors.transparent,
+        caliber: null
     };
 
 
     list.push(item);
     position++;
-
-    var item = {
-        _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7fa'),
-        mode: 'ups_autonomy',
-        title: "Autonomía de UPS",
-        description: "",
-        group: 'ups_autonomy',
-        type: "ups_autonomy",
-        gallery: false,
-        hasValue: false,
-        position,
-        placeHolder: "",
-        letterOne: "",
-        letterTwo: "",
-        colorOne: colors.transparent,
-        colorTwo: colors.transparent,
-        textColorOne: colors.transparent,
-        textColorTwo: colors.transparent,
-    };
-    list.push(item);
-    position++;
-
 
     Item.insertMany(list).then(function () {
         console.log("Data inserted")
@@ -100,7 +79,308 @@ exports.NewItem = function () {
         console.log(error)
     });
 }
+exports.NewItemFinding = function () {
+    var Item = schemas.Item;
+    var list = new Array();
+    let position = 1;
 
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        mode: 'finding',
+        title: "Verficación de corriente",
+        description: "",
+        group: 'verfication_corriente',
+        type: "verfication_corriente",
+        gallery: false,
+        hasValue: false,
+        position,
+        placeHolder: "",
+        letterOne: "",
+        letterTwo: "",
+        colorOne: colors.transparent,
+        colorTwo: colors.transparent,
+        textColorOne: colors.transparent,
+        textColorTwo: colors.transparent,
+        caliber: null
+    };
+
+
+    list.push(item);
+    position++;
+
+    Item.insertMany(list).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+}
+/** Creacion parametros **/
+exports.CopperAluminumTable = function () {
+    var CaliberTable = schemas.CaliberTable;
+    var list = new Array();
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '14',
+        amps: 15,
+        protection: 15,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '12',
+        amps: 25,
+        protection: 20,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '10',
+        amps: 30,
+        protection: 30,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '8',
+        amps: 50,
+        protection: 40,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '6',
+        amps: 65,
+        protection: 60,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '4',
+        amps: 85,
+        protection: 70,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '2',
+        amps: 115,
+        protection: 100,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '1/0',
+        amps: 150,
+        protection: 125,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '2/0',
+        amps: 175,
+        protection: 150,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '4/0',
+        amps: 230,
+        protection: 230,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '250',
+        amps: 255,
+        protection: 255,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '300',
+        amps: 285,
+        protection: 285,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '350',
+        amps: 310,
+        protection: 310,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '400',
+        amps: 335,
+        protection: 335,
+        type: 'cooper'
+    };
+    list.push(item);
+
+    //----------------------------------------//
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '14',
+        amps: 14,
+        protection: 14,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '12',
+        amps: 20,
+        protection: 20,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '10',
+        amps: 30,
+        protection: 30,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '8',
+        amps: 40,
+        protection: 40,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '6',
+        amps: 40,
+        protection: 40,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '4',
+        amps: 65,
+        protection: 65,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '2',
+        amps: 90,
+        protection: 90,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '1/0',
+        amps: 120,
+        protection: 120,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '2/0',
+        amps: 135,
+        protection: 135,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '4/0',
+        amps: 180,
+        protection: 180,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '250',
+        amps: 205,
+        protection: 205,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '300',
+        amps: 230,
+        protection: 230,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '350',
+        amps: 250,
+        protection: 250,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+    var item = {
+        // _id: mongoose.Types.ObjectId('62aca8eca778c877280ab7f9'),
+        caliber: '400',
+        amps: 270,
+        protection: 270,
+        type: 'aluminum'
+    };
+    list.push(item);
+
+
+    CaliberTable.insertMany(list).then(function () {
+        console.log("Data inserted")
+    }).catch(function (error) {
+        console.log(error)
+    });
+}
 exports.MaintenanceType = function () {
     var MaintenanceType = schemas.MaintenanceType;
     var list = new Array();
@@ -1187,6 +1467,30 @@ exports.setItemBoardToDefault = async function () {
         }).exec();
     });
 }
+exports.addItemBoard = async function () {
+    let boards = await schemas.Board.find()
+    await fn.asyncForEach(boards, async board => {
+        let itemBoard = schemas.ItemBoard({
+            board: board._id,
+            item: mongoose.Types.ObjectId('6311dec37a753854fca0ae62'),
+            status: 'activo',
+            photos: [],
+            percentBatery: 0.0,
+            value: 0.0,
+            caliber: null,
+            line_per_phase: 0,
+
+        });
+        await itemBoard.save();
+        await schemas.Board.updateOne({ "_id": mongoose.Types.ObjectId(board._id) }, {
+            $push: {
+                itemsBoards: itemBoard._id
+            }
+        }, {
+            multi: true
+        }).exec();
+    });
+}
 exports.createConfiguration = function () {
 
     var list = new Array()
@@ -1373,12 +1677,21 @@ exports.createMenuWeb = () => {
     })
     listPage.push(asignarRoles)
 
+    var calibers = new schemas.Page({
+        title: 'Calibres',
+        href: '/setting/calibers',
+        icon: 'FcCableRelease',
+        isParent: false,
+        roles: ['5a046fe9627e3526802b3847']
+    })
+    listPage.push(calibers)
 
 
     pageAjustes.children.push(usuarios._id)
     pageAjustes.children.push(clientes._id)
     pageAjustes.children.push(roles._id)
     pageAjustes.children.push(asignarRoles._id)
+    pageAjustes.children.push(calibers._id)
 
     menu.save()
 
@@ -1481,7 +1794,7 @@ exports.createMenuMobile = () => {
         href: 'attentions-reports',
         icon: 'VscProject',
         isParent: false,
-        backgroundColor: 'ffb175',
+        backgroundColor: 'ffb135',
         iconColor: "FFFFFF",
         textColor: "FFFFFF",
         children: [],

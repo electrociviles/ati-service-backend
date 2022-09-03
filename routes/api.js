@@ -864,15 +864,19 @@ router.post('/createBoard', async (req, res) => {
 
 router.post('/getItemBoard', async (req, res) => {
 
+  console.log(req.body)
   let completed = await fn.verifyItemBoard(req.body.board);
-  items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),).populate({
-    path: 'itemsBoards',
-    match: { status: "activo" },
-    populate: [{
-      path: "item",
+  items = await schemas.Board.findById(mongoose.Types.ObjectId(req.body.board),)
+    .populate({
+      path: 'itemsBoards',
+      match: { status: "activo" },
+      populate: [{
+        path: "item",
+      }, {
+        path: "caliber",
+      }],
 
-    }]
-  }).exec();
+    }).exec();
   res.json({ status: 'success', completed, items });
 });
 
@@ -1508,11 +1512,13 @@ router.post('/updateAutomyValue', async (req, res) => {
 
 router.post('/updateValue', async (req, res) => {
 
+  console.log(req.body)
   if (req.body.id && req.body.value) {
     let { id, value } = req.body;
     schemas.ItemBoard.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
       $set: {
         value: parseFloat(value),
+        color: req.body.color
       }
     }, {
       upsert: true
@@ -3674,6 +3680,7 @@ router.post('/maintenancesReport', authMiddleware, async (req, res) => {
   res.json({ status: 'success', message: "Success", maintenances, count });
 
 });
+
 router.post('/maintenancesReportPdf', authMiddleware, async (req, res) => {
 
   let { order, startDate, endDate, maintenanceType, customer, centerOfAttention, source } = req.body
@@ -3736,6 +3743,7 @@ router.post('/maintenancesReportPdf', authMiddleware, async (req, res) => {
 
 
 });
+
 router.post('/maintenancesReportExcel', authMiddleware, async (req, res) => {
   let { order, startDate, endDate, maintenanceType, customer, centerOfAttention, source } = req.body
   let dates = fn.getDates(startDate, endDate, source == 'web' ? 'T' : ' ')
@@ -3831,5 +3839,142 @@ router.post('/maintenancesReportExcel', authMiddleware, async (req, res) => {
 
 });
 
+router.post('/listCaliberTable', async (req, res) => {
 
+  let { type, start, end, paginate } = req.body;
+  console.log(req.body)
+  var query = schemas.CaliberTable.find();
+  let queryCount = schemas.CaliberTable.countDocuments();
+
+  if (type) {
+    query.where('type').equals(type)
+    queryCount.where('type').equals(type)
+  }
+
+  if (paginate) {
+    query.skip(start)
+      .limit(end);
+  }
+  let count = await queryCount.exec();
+  let calibersTable = await query.exec();
+  res.json({ status: 'success', calibersTable, count });
+});
+
+router.post('/createCaliber', async (req, res) => {
+
+  console.log(req.body)
+  let { caliber, amps, protection, type } = req.body;
+  try {
+    let caliberTable = new schemas.CaliberTable({
+      caliber,
+      amps: Number(amps),
+      protection: Number(protection),
+      type,
+    });
+    await caliberTable.save();
+
+    res.json({ status: 'success', caliber: caliberTable, message: "Registrado exitosamente" });
+  } catch (error) {
+    console.log(error)
+    res.json({ status: 'error', message: error });
+  }
+});
+
+router.post('/deleteCaliber', async (req, res) => {
+  try {
+
+    let { id } = req.body;
+    await schemas.CaliberTable.deleteOne({ "_id": mongoose.Types.ObjectId(id) }).exec();
+
+    res.json({ status: 'success', message: 'Desabilitado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar' });
+  }
+});
+
+router.post('/restoreCaliber', async (req, res) => {
+  try {
+    let { id } = req.body;
+    schemas.CaliberTable.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+      $set: {
+        status: 'active',
+      }
+    }, {
+      multi: true
+    }).exec();
+    res.json({ status: 'success', message: 'Desabilitado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar' });
+  }
+});
+
+router.post('/updateCaliber', async (req, res) => {
+  try {
+    let { id, caliber, amps, protection, type } = req.body;
+
+    schemas.CaliberTable.updateOne({ "_id": mongoose.Types.ObjectId(id) }, {
+      $set: {
+        caliber,
+        amps,
+        protection,
+        type,
+      }
+    }, {
+      multi: true
+    }).exec();
+    let caliberTable = await schemas.CaliberTable.findById(mongoose.Types.ObjectId(id))
+    res.json({ status: 'success', caliber: caliberTable, message: 'Actualizado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar' });
+  }
+});
+
+router.post('/listCalibersType', async (req, res) => {
+  try {
+    let calibersType = [{
+      "_id": "cooper",
+      "name": "Cobre"
+    }, {
+      "_id": "aluminum",
+      "name": "Aluminio"
+    }]
+    res.json({ status: 'success', calibersType });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar' });
+  }
+});
+router.post('/saveCaliber', authMiddleware, async (req, res) => {
+
+  let { color, caliberId, itemImageId, linePerPhase, currentProtection } = req.body;
+
+  console.log(req.body)
+
+  try {
+
+    schemas.ItemBoard.updateOne({ _id: mongoose.Types.ObjectId(itemImageId) }, {
+      $set: {
+        caliber: mongoose.Types.ObjectId(caliberId),
+        linePerPhase,
+        currentProtection,
+        color
+      }
+    }, {
+      multi: true
+    }).exec();
+
+    res.json({ status: 'success', message: 'Actualizado exitosamente' });
+
+  } catch (error) {
+    console.log(error);
+    res.json({ status: 'error', message: 'Ocurrió un error al desabilitar' });
+  }
+});
 module.exports = router;

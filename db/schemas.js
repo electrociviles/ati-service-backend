@@ -134,13 +134,17 @@ var ItemSchema = new mongoose.Schema({
     colorTwo: String,
     textColor: String,
     textColorOne: String,
-    textColorTwo: String,
+    textColorTwo: String
 });
 var Item = mongoose.model('Item', ItemSchema);
 
 var ItemBoardSchema = new mongoose.Schema({
     board: { type: mongoose.Schema.Types.ObjectId, ref: 'Board' },
     item: { type: mongoose.Schema.Types.ObjectId, ref: 'Item' },
+    caliber: { type: mongoose.Schema.Types.ObjectId, ref: 'caliber_table' },
+    linePerPhase: mongoose.Schema.Types.Double,
+    currentProtection: mongoose.Schema.Types.Double,
+    color: String,
     photos: [],
     date: String,
     status: String,
@@ -283,6 +287,17 @@ const ConfigurationSchema = new mongoose.Schema({
 })
 const Configuration = mongoose.model('configuration', ConfigurationSchema)
 
+const CaliberTableSchema = new mongoose.Schema({
+    caliber: String,
+    amps: mongoose.Schema.Types.Double,
+    protection: mongoose.Schema.Types.Double,
+    type: String,
+    status: String,
+})
+const CaliberTable = mongoose.model('caliber_table', CaliberTableSchema)
+
+
+
 
 var schemas = {
     Customer,
@@ -303,6 +318,7 @@ var schemas = {
     RequestType,
     Request,
     RequestDescription,
-    MaintenanceType
+    MaintenanceType,
+    CaliberTable,
 };
 module.exports = schemas;
