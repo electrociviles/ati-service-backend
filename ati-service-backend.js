@@ -89,8 +89,8 @@ server.listen(config.port, async function () {
   // init.createCustomer();
   // init.createMaintenances();
   // init.createRole();
-  init.createMenuWeb();
-  init.createMenuMobile();
+  // init.createMenuWeb();
+  // init.createMenuMobile();
   // init.createConfiguration();
   // init.createAttentionType()
   // init.updateCustomerToUsers()
